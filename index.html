@@ -914,9 +914,11 @@
             if(!dancing && Math.sin(a)>=0) rope();
             line(10,62,22,62);
             if(dancing) {
-              // Small music notes stay outside the silhouette.
-              disk(3,8,1); line(4,8,4,3); line(4,3,7,4);
-              disk(27,7,1); line(28,7,28,2); dot(29,3);
+              // Offset beats keep the notes bouncing within the clear space above the hat.
+              const leftBeat=Math.round(Math.sin(a*2)*2);
+              const rightBeat=Math.round(Math.sin(a*2+Math.PI/2)*2);
+              disk(3,7+leftBeat,1); line(4,7+leftBeat,4,2+leftBeat); line(4,2+leftBeat,7,3+leftBeat);
+              disk(27,7+rightBeat,1); line(28,7+rightBeat,28,2+rightBeat); dot(29,3+rightBeat);
             }
           } else if (name === "rocket") {
             const y = 70-t*94;
