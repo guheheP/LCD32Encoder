@@ -332,6 +332,10 @@
               <button type="button" data-portrait="basketball">バスケットボール</button>
               <button type="button" data-portrait="astronaut">宇宙遊泳</button>
               <button type="button" data-portrait="flower">花が咲く</button>
+              <button type="button" data-portrait="reel">リール回転</button>
+              <button type="button" data-portrait="jackpot">7でストップ</button>
+              <button type="button" data-portrait="coins">コインシャワー</button>
+              <button type="button" data-portrait="countdown">カウントダウン</button>
             </div>
             <p class="field-note">縦2枚（32×64）に切り替え、全フレームを置き換えます。単色で上下いっぱいに動きます。再生ボタンで確認できます。</p>
           </div>
@@ -822,7 +826,11 @@
         fireworks: { label: "打ち上げ花火", count: 48, delay: 80 },
         basketball: { label: "バスケットボール", count: 64, delay: 80 },
         astronaut: { label: "宇宙遊泳", count: 40, delay: 110 },
-        flower: { label: "花が咲く", count: 48, delay: 110 }
+        flower: { label: "花が咲く", count: 48, delay: 110 },
+        reel: { label: "リール回転", count: 36, delay: 70 },
+        jackpot: { label: "7でストップ", count: 64, delay: 80 },
+        coins: { label: "コインシャワー", count: 40, delay: 80 },
+        countdown: { label: "カウントダウン", count: 48, delay: 80 }
       };
       function build(name) {
         const preset = presets[name];
@@ -1126,6 +1134,86 @@
             line(9,55,23,55); for(let xx=11;xx<=21;xx++) dot(xx,57,0);
             // A small drifting mote follows a closed path above the blossom.
             star(16+Math.sin(a)*9,5+Math.cos(a)*2,1);
+          } else if (name === "reel" || name === "jackpot" || name === "countdown") {
+            const glyphs={
+              '7':['11111','10001','00010','00100','00100','00100','00100'],
+              '3':['11110','00001','00001','01110','00001','00001','11110'],
+              '2':['01110','10001','00001','00010','00100','01000','11111'],
+              '1':['00100','01100','00100','00100','00100','00100','01110'],
+              G:['01110','10001','10000','10111','10001','10001','01110'],
+              O:['01110','10001','10001','10001','10001','10001','01110'],
+              W:['10001','10001','10001','10101','10101','11011','10001'],
+              I:['11111','00100','00100','00100','00100','00100','11111'],
+              N:['10001','11001','11001','10101','10011','10011','10001'],
+              bell:['00100','01110','01110','01110','11111','00000','00100'],
+              cherry:['00011','00110','01010','01010','11011','11011','00000']
+            };
+            const glyph=(key,left,top,scale=1,clipTop=0,clipBottom=63)=>{
+              glyphs[key].forEach((row,y)=>Array.from(row).forEach((v,x)=>{
+                if(v==='1') for(let dy=0;dy<scale;dy++) for(let dx=0;dx<scale;dx++) {
+                  const yy=top+y*scale+dy;
+                  if(yy>=clipTop && yy<=clipBottom) dot(left+x*scale+dx,yy);
+                }
+              }));
+            };
+            const word=(text,top,scale=1)=>{
+              const left=Math.floor((32-(text.length*6-1)*scale)/2);
+              Array.from(text).forEach((letter,k)=>glyph(letter,left+k*6*scale,top,scale));
+            };
+            if(name==='countdown') {
+              const stage=Math.floor(i/12), progress=(i%12)/12;
+              if(stage<3) glyph(String(3-stage),9,23,3);
+              else word('GO',26,2);
+              // A shrinking perimeter provides anticipation without hiding the numeral.
+              for(let k=0;k<48*(1-progress);k++) {
+                const angle=k*Math.PI/24-Math.PI/2;
+                dot(16+14*Math.cos(angle),33+24*Math.sin(angle));
+              }
+              if(stage===3) { star(4,13,2); star(27,52,2); }
+            } else {
+              const stopped=name==='jackpot' && i>=40;
+              const offset=name==='reel' ? Math.floor(t*72) : Math.round(216*(1-(1-Math.min(1,i/40))**3));
+              // Three repeating symbols scroll inside a fixed reel window.
+              for(let y=0;y<=63;y+=4) {
+                dot(2,y,((Math.floor(y/4)+Math.floor(i/3))%3)===0 ? 1 : 0);
+                dot(29,y,((Math.floor(y/4)-Math.floor(i/3)+24)%3)===0 ? 1 : 0);
+              }
+              line(5,16,26,16); line(5,47,26,47);
+              line(5,16,5,47); line(26,16,26,47);
+              for(let row=0;row<13;row++) {
+                const top=25+row*24-offset;
+                if(top>46 || top+13<17) continue;
+                glyph(['7','bell','cherry'][row%3],11,top,2,17,46);
+              }
+              // Payline pointers remain outside the moving artwork.
+              line(1,30,3,32); line(3,32,1,34);
+              line(30,30,28,32); line(28,32,30,34);
+              if(stopped) {
+                word('WIN',5);
+                const radius=1+Math.floor(i/3)%2;
+                star(8,55,radius); star(24,55,radius); star(16,59,1);
+              } else {
+                line(11,7,20,7); line(11,10,20,10);
+                glyph('7',14,53);
+              }
+            }
+          } else if (name === "coins") {
+            // Edge-on and face-on coins fall at staggered positions in a seamless loop.
+            for(let k=0;k<10;k++) {
+              const x=4+(k*11)%24+Math.sin(a+k)*1.5;
+              const y=(k*19+t*64)%64;
+              const half=1+Math.abs(Math.cos(a*2+k))*2;
+              for(let dy=-4;dy<=4;dy++) for(let dx=-3;dx<=3;dx++) {
+                const d=dx*dx/(half*half)+dy*dy/16;
+                if(d<=1 && d>=.42) dot(x+dx,y+dy);
+              }
+              if(half>2) line(x,y-2,x,y+2);
+              else line(x,y-3,x,y+3);
+            }
+            for(let k=0;k<4;k++) {
+              const x=4+k*8, y=8+k*15;
+              if((i+k*4)%16<4) star(x,y,1);
+            }
           } else if (name === "fireworks") {
             const burst=14;
             if(i<burst) {

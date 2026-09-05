@@ -39,3 +39,11 @@ test('human animations wrap without a discontinuous pose jump',()=>{
     assert.ok(difference(frames.at(-1),frames[0])<=largestStep);
   }
 });
+test('jackpot holds the winning reel while its celebration continues',()=>{
+  const frames=presets.build('jackpot');
+  const window=f=>Array.from(f.slice(17*32,47*32)).filter((_,i)=>i%32>=6&&i%32<=25);
+  const stopped=window(frames[40]);
+  for(const f of frames.slice(40)) assert.deepEqual(window(f),stopped);
+  assert.ok(frames.slice(0,40).some(f=>window(f).some((v,i)=>v!==stopped[i])));
+  assert.ok(new Set(frames.slice(40).map(f=>Array.from(f).join(''))).size>1);
+});
