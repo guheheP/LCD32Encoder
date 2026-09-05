@@ -32,7 +32,7 @@ test('firework sparks spread and fully burn out before the next launch',()=>{
   assert.ok(counts[0]>0);
 });
 test('human animations wrap without a discontinuous pose jump',()=>{
-  for(const name of ['dance','rope']) {
+  for(const name of ['dance','rope','breakdance']) {
     const frames=presets.build(name);
     const difference=(a,b)=>a.reduce((sum,v,k)=>sum+(v!==b[k]),0);
     const largestStep=Math.max(...frames.slice(1).map((f,i)=>difference(f,frames[i])));

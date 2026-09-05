@@ -324,6 +324,7 @@
             <h3>縦画面プリセット · 32×64</h3>
             <div class="pattern-grid">
               <button type="button" data-portrait="dance">ダンス</button>
+              <button type="button" data-portrait="breakdance">ブレイクダンス</button>
               <button type="button" data-portrait="rope">なわとび</button>
               <button type="button" data-portrait="rocket">ロケット上昇</button>
               <button type="button" data-portrait="jellyfish">泳ぐクラゲ</button>
@@ -811,6 +812,7 @@
     const LCDPortraitPresets = (() => {
       const presets = {
         dance: { label: "ダンス", count: 32, delay: 90 },
+        breakdance: { label: "ブレイクダンス", count: 48, delay: 90 },
         rope: { label: "なわとび", count: 20, delay: 80 },
         rocket: { label: "ロケット上昇", count: 32, delay: 90 },
         jellyfish: { label: "泳ぐクラゲ", count: 32, delay: 110 },
@@ -920,6 +922,51 @@
               disk(3,7+leftBeat,1); line(4,7+leftBeat,4,2+leftBeat); line(4,2+leftBeat,7,3+leftBeat);
               disk(27,7+rightBeat,1); line(28,7+rightBeat,28,2+rightBeat); dot(29,3+rightBeat);
             }
+          } else if (name === "breakdance") {
+            // Shoulder/hip centres, elbows/wrists, knees/ankles: descend, sweep, freeze, recover.
+            const poses = [
+              [15,26,16,40, 7,32,11,36, 24,29,27,24, 10,48,7,58, 22,48,26,58],
+              [14,33,18,45, 7,40,5,48, 24,39,27,46, 10,51,6,58, 25,51,27,58],
+              [12,43,20,48, 7,51,8,59, 19,49,22,59, 12,52,5,56, 26,45,29,38],
+              [13,44,21,42, 9,51,8,59, 21,49,25,56, 26,47,29,55, 24,31,20,23],
+              [14,44,18,32, 10,51,8,59, 23,42,27,36, 10,26,5,17, 24,22,28,11],
+              [14,44,17,31, 10,51,8,59, 23,41,27,34, 9,23,5,14, 23,21,28,11],
+              [14,44,17,31, 10,51,8,59, 23,41,27,34, 9,23,5,14, 23,21,28,11],
+              [15,44,18,33, 11,51,8,59, 24,43,28,38, 11,25,9,16, 25,31,29,25],
+              [15,44,23,40, 10,51,8,59, 22,48,26,58, 25,29,20,22, 26,47,29,55],
+              [13,44,20,48, 8,51,8,59, 20,50,24,59, 12,53,4,56, 26,49,28,58],
+              [13,35,17,45, 6,43,7,52, 23,40,27,47, 10,51,7,58, 24,51,26,58],
+              [14,28,17,41, 6,33,10,37, 24,30,27,26, 10,48,7,58, 23,49,26,58]
+            ];
+            const phase=t*poses.length, n=Math.floor(phase), f=phase-n;
+            const blend=f*f*(3-2*f);
+            const pose=poses[n].map((v,k)=>v+(poses[(n+1)%poses.length][k]-v)*blend);
+            const [sx,sy,hx,hy,lex,ley,lwx,lwy,rex,rey,rwx,rwy,lkx,lky,lax,lay,rkx,rky,rax,ray]=pose;
+            const length=Math.hypot(sx-hx,sy-hy);
+            const ux=(sx-hx)/length, uy=(sy-hy)/length, vx=-uy, vy=ux;
+            const limb=(x0,y0,x1,y1,x2,y2,r)=>{line(x0,y0,x1,y1,r);line(x1,y1,x2,y2,r*.8);};
+            limb(hx-vx*2,hy-vy*2,lkx,lky,lax,lay,2);
+            limb(hx+vx*2,hy+vy*2,rkx,rky,rax,ray,2);
+            // Shoes follow each shin, including the upside-down freeze.
+            for(const [kx,ky,ax,ay] of [[lkx,lky,lax,lay],[rkx,rky,rax,ray]]) {
+              const len=Math.hypot(ax-kx,ay-ky);
+              line(ax-2*(ay-ky)/len,ay+2*(ax-kx)/len,ax+2*(ay-ky)/len,ay-2*(ax-kx)/len,1);
+            }
+            limb(sx-vx*3,sy-vy*3,lex,ley,lwx,lwy,1.5);
+            limb(sx+vx*3,sy+vy*3,rex,rey,rwx,rwy,1.5);
+            disk(lwx,lwy,1.3); disk(rwx,rwy,1.3);
+            line(hx,hy,sx,sy,3.5);
+            // Hat and featureless head rotate with the torso rather than staying upright.
+            line(sx,sy,sx+ux*4,sy+uy*4,1);
+            const headX=sx+ux*7, headY=sy+uy*7;
+            disk(headX,headY,3);
+            for(let depth=2;depth<=6;depth++)
+              line(headX+ux*depth-vx*3,headY+uy*depth-vy*3,headX+ux*depth+vx*3,headY+uy*depth+vy*3);
+            line(headX+ux*2-vx*5,headY+uy*2-vy*5,headX+ux*2+vx*5,headY+uy*2+vy*5,1);
+            for(let k=-2;k<=2;k++) dot(hx+ux*2+vx*k,hy+uy*2+vy*k,0);
+            line(3,62,29,62);
+            // A brief accent marks the held one-hand freeze.
+            if(n===5 || n===6) { star(3,35,1); star(28,47,1); }
           } else if (name === "rocket") {
             const y = 70-t*94;
             for (let dy=0;dy<23;dy++) {
