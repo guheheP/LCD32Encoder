@@ -329,6 +329,9 @@
               <button type="button" data-portrait="rocket">ロケット上昇</button>
               <button type="button" data-portrait="jellyfish">泳ぐクラゲ</button>
               <button type="button" data-portrait="fireworks">打ち上げ花火</button>
+              <button type="button" data-portrait="basketball">バスケットボール</button>
+              <button type="button" data-portrait="astronaut">宇宙遊泳</button>
+              <button type="button" data-portrait="flower">花が咲く</button>
             </div>
             <p class="field-note">縦2枚（32×64）に切り替え、全フレームを置き換えます。単色で上下いっぱいに動きます。再生ボタンで確認できます。</p>
           </div>
@@ -816,7 +819,10 @@
         rope: { label: "なわとび", count: 20, delay: 80 },
         rocket: { label: "ロケット上昇", count: 32, delay: 90 },
         jellyfish: { label: "泳ぐクラゲ", count: 32, delay: 110 },
-        fireworks: { label: "打ち上げ花火", count: 48, delay: 80 }
+        fireworks: { label: "打ち上げ花火", count: 48, delay: 80 },
+        basketball: { label: "バスケットボール", count: 64, delay: 80 },
+        astronaut: { label: "宇宙遊泳", count: 40, delay: 110 },
+        flower: { label: "花が咲く", count: 48, delay: 110 }
       };
       function build(name) {
         const preset = presets[name];
@@ -863,7 +869,7 @@
             } else {
               const lift=jump*6, crouch=Math.max(0,-Math.cos(a))*2;
               pose=[16,24-lift+crouch,16,38-lift+crouch,
-                7,30-lift,4,35-lift, 25,30-lift,28,35-lift,
+                7,30-lift,4,35-lift+Math.sin(a), 25,30-lift,28,35-lift+Math.sin(a),
                 12,47-lift+crouch,13,57-lift, 20,47-lift+crouch,19,57-lift];
             }
             const [sx,sy,hx,hy,lex,ley,lhx,lhy,rex,rey,rhx,rhy,lkx,lky,lfx,lfy,rkx,rky,rfx,rfy]=pose;
@@ -999,9 +1005,14 @@
               const half = dy<7 ? Math.floor(dy/2) : dy<18 ? 4 : 7;
               for(let dx=-half;dx<=half;dx++) dot(16+dx,y+dy);
             }
-            disk(16,y+11,2,0);
-            for(let dy=0;dy<9+(i%3)*2;dy++)
-              line(14+dy/5,y+24+dy,18-dy/5,y+24+dy);
+            disk(16,y+11,3,0); disk(16,y+11,1);
+            for(let dx=-3;dx<=3;dx++) dot(16+dx,y+20,0);
+            // Separate flickering exhaust tongues preserve the engine silhouette.
+            for(let jet=-1;jet<=1;jet++) {
+              const flame=6+((i+jet+3)%4)*2;
+              line(16+jet*2,y+24,16+jet,y+24+flame);
+              dot(16+jet,y+26+flame);
+            }
             for(let k=0;k<7;k++) {
               const sy=(k*13+t*64)%64;
               line(k%2 ? 27 : 4,sy,k%2 ? 27 : 4,sy+2);
@@ -1010,6 +1021,10 @@
             const x=16+Math.sin(a)*3, y=19+Math.cos(a)*8, radius=10+Math.sin(a*2)*2;
             for(let dy=-9;dy<=1;dy++) for(let dx=-12;dx<=12;dx++)
               if(dx*dx/(radius*radius)+dy*dy/100<=1) dot(x+dx,y+dy);
+            // A scalloped bell rim and fine ribs make the pulsing dome readable.
+            for(let rib=-1;rib<=1;rib++) for(let dy=-7;dy<=-3;dy++)
+              dot(x+rib*4*(1+dy/12),y+dy,0);
+            for(let dx=-8;dx<=8;dx+=4) dot(x+dx,y+1,0);
             disk(x-4,y-2,1,0); disk(x+4,y-2,1,0);
             for(let k=0;k<5;k++) for(let dy=2;dy<27;dy++)
               dot(x+(k-2)*4+Math.sin(a*2+dy*.3+k)*2,y+dy);
@@ -1017,6 +1032,100 @@
               const bx=k%2 ? 28 : 3, by=(k*23+64-t*64)%64;
               dot(bx-1,by); dot(bx+1,by); dot(bx,by-1); dot(bx,by+1);
             }
+          } else if (name === "basketball") {
+            // A complete possession: dribble twice, gather, shoot, net, bounce back.
+            let bx=20, by, reach=0;
+            if(i<16) by=39+20*Math.sin(Math.PI*(i%8)/8);
+            else if(i<24) { reach=(i-16)/8; bx=20-reach*2; by=39-reach*13; }
+            else if(i<40) {
+              const q=(i-24)/16; bx=18+7*q; by=26-12*q-18*Math.sin(Math.PI*q);
+              reach=Math.max(0,1-(i-30)/10);
+            } else if(i<48) { bx=25; by=14+(i-40)/8*45; }
+            else { const q=(i-48)/16; bx=25-q*5; by=59-q*20-12*Math.sin(Math.PI*q); }
+            reach=Math.min(1,reach);
+            const lift=reach*3, sx=10, sy=36-lift;
+            // Backboard, hoop and a net that stretches briefly as the ball passes.
+            line(30,7,30,60); line(28,8,28,14); line(28,8,30,8);
+            line(21,14,29,14);
+            const netPull=i>=40 && i<44 ? Math.sin((i-40)/4*Math.PI)*2 : 0;
+            line(21,15,23,21+netPull); line(28,15,26,21+netPull);
+            line(23,15,26,21+netPull); line(26,15,23,21+netPull);
+            line(23,21+netPull,26,21+netPull);
+            line(3,62,30,62);
+            disk(sx,sy-7,3.5); line(sx,sy-3,sx,sy,1);
+            line(sx,sy,sx+1,47-lift,3);
+            line(9,46-lift,6,52-lift,1.7); line(6,52-lift,5,59-lift,1.3);
+            line(13,46-lift,16,52-lift,1.7); line(16,52-lift,18,59-lift,1.3);
+            line(3,60-lift,7,60-lift,1); line(16,60-lift,20,60-lift,1);
+            const handX=18, handY=38-reach*12;
+            line(7,sy+1,6,sy+6-reach*10,1);
+            line(6,sy+6-reach*10,handX-3,handY+1,1);
+            line(13,sy+1,18,sy+4-reach*9,1);
+            line(18,sy+4-reach*9,handX,handY,1);
+            // Jersey number and shorts hem in negative space.
+            dot(10,sy+4,0); dot(11,sy+4,0); dot(11,sy+5,0); dot(10,sy+6,0);
+            for(let dx=-2;dx<=2;dx++) dot(11+dx,45-lift,0);
+            disk(bx,by,3); disk(bx,by,2,0);
+            line(bx-2,by,bx+2,by); line(bx,by-2,bx,by+2);
+          } else if (name === "astronaut") {
+            const x=16+Math.sin(a)*2, y=21+Math.cos(a)*3;
+            // Slow drifting stars and a curved safety tether establish weightlessness.
+            for(let k=0;k<4;k++) {
+              const yy=k*16+7+Math.sin(a+k)*2, xx=k%2 ? 29 : 2;
+              if(k%2) star(xx,yy,1); else dot(xx,yy);
+            }
+            let previous=[4,0];
+            for(let k=1;k<=30;k++) {
+              const u=k/30, point=[4+(x-8)*u+Math.sin(u*Math.PI*2+a)*2*u,(y+13)*u];
+              line(...previous,...point); previous=point;
+            }
+            // Backpack, articulated sleeves and boots.
+            for(let yy=y+7;yy<=y+20;yy++) line(x-7,yy,x+7,yy);
+            const leftHand=[x-11,y+8+Math.sin(a)*3], rightHand=[x+11,y+3-Math.sin(a)*3];
+            line(x-4,y+10,x-9,y+15,2); line(x-9,y+15,...leftHand,1.5);
+            line(x+4,y+10,x+9,y+10,2); line(x+9,y+10,...rightHand,1.5);
+            disk(...leftHand,2); disk(...rightHand,2);
+            line(x-3,y+21,x-5,y+30,2); line(x-5,y+30,x-9,y+36+Math.sin(a)*2,1.7);
+            line(x+3,y+21,x+8,y+27,2); line(x+8,y+27,x+7,y+34-Math.sin(a)*2,1.7);
+            line(x-11,y+37+Math.sin(a)*2,x-7,y+37+Math.sin(a)*2,1.5);
+            line(x+5,y+35-Math.sin(a)*2,x+10,y+35-Math.sin(a)*2,1.5);
+            for(let yy=y+8;yy<=y+22;yy++) line(x-5,yy,x+5,yy);
+            for(let yy=y+11;yy<=y+16;yy++) for(let xx=x-3;xx<=x+3;xx++) dot(xx,yy,0);
+            dot(x-1,y+13); dot(x+2,y+13); line(x-1,y+15,x+2,y+15);
+            disk(x,y,7); disk(x,y,5,0);
+            line(x-3,y-3,x,y-4); dot(x-4,y-1);
+            line(x-4,y+7,x+4,y+7);
+          } else if (name === "flower") {
+            const open=(1-Math.cos(a))/2, sway=Math.sin(a)*2;
+            const cx=16+sway, cy=23-Math.sin(a)*2;
+            // Curving stem and veined leaves, anchored to a small flowerpot.
+            let previous=[16,56];
+            for(let k=1;k<=32;k++) {
+              const u=k/32, point=[16+sway*u+Math.sin(u*Math.PI)*2,56+(cy-56)*u];
+              line(...previous,...point,1); previous=point;
+            }
+            for(const [direction,baseY] of [[-1,43],[1,49]]) {
+              for(let k=0;k<9;k++) {
+                const xx=17+direction*k, yy=baseY-k*.65;
+                line(xx,yy-Math.sin(k/8*Math.PI)*2,xx,yy+Math.sin(k/8*Math.PI)*2);
+                if(k>1 && k<7) dot(xx,yy,0);
+              }
+            }
+            // Petals unfurl outwards instead of simply scaling the entire flower.
+            for(let k=0;k<8;k++) {
+              const angle=k*Math.PI/4;
+              const radius=2+open*7;
+              disk(cx+Math.cos(angle)*radius,cy+Math.sin(angle)*radius*(.5+open*.5),2+open*1.7);
+            }
+            disk(cx,cy,2.5+open*2.5,0);
+            disk(cx,cy,1.5+open*2);
+            if(open>.4) for(const [dx,dy] of [[-2,-2],[2,-2],[0,0],[-2,2],[2,2]]) dot(cx+dx,cy+dy,0);
+            for(let yy=56;yy<=62;yy++) {
+              const half=6-(yy-56)*.4; line(16-half,yy,16+half,yy);
+            }
+            line(9,55,23,55); for(let xx=11;xx<=21;xx++) dot(xx,57,0);
+            // A small drifting mote follows a closed path above the blossom.
+            star(16+Math.sin(a)*9,5+Math.cos(a)*2,1);
           } else if (name === "fireworks") {
             const burst=14;
             if(i<burst) {
