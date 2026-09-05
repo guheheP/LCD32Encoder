@@ -3,603 +3,825 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>32×32 LCD Encoder for Resonite</title>
+  <meta name="description" content="32×32パネルを並べてドット絵や文字アニメーションを作成。96×32などの配置を指定し、Resoniteで使える文字列に変換します。">
+  <meta name="theme-color" content="#101315">
+  <title>LCD32 Encoder — Resonite用ドット絵エディター</title>
   <style>
     :root {
       color-scheme: dark;
-      --bg: #101416;
-      --panel: #192022;
-      --panel-2: #202a2c;
-      --line: #344346;
-      --text: #edf5f2;
-      --muted: #a8bab6;
-      --accent: #9bf6c2;
-      --accent-2: #5edc9c;
-      --danger: #ffb1a8;
-      --ok: #9bf6c2;
-      --off: #d8e1dd;
-      --on: #15231d;
+      --bg: #101315; --panel: #1a1e20; --panel-2: #242a2d; --line: #343c3f;
+      --text: #edf1ef; --muted: #a4afb1; --accent: #b7ed83; --accent-2: #97d964;
+      --danger: #ffa79d; --ok: #b7ed83; --off: #c3d3a4; --on: #293b28;
+      --mono: Consolas, "Cascadia Mono", monospace;
     }
-
     * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      background:
-        radial-gradient(circle at 10% 0%, rgba(91, 201, 146, .11), transparent 34rem),
-        var(--bg);
-      color: var(--text);
-      font-family: "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
-      line-height: 1.5;
-    }
-
-    main {
-      width: min(1500px, calc(100% - 32px));
-      margin: 0 auto;
-      padding: 30px 0 48px;
-    }
-
-    h1, h2, h3, p { margin-top: 0; }
-    h1 { margin-bottom: 8px; font-size: clamp(1.55rem, 3vw, 2.35rem); letter-spacing: .02em; }
-    h2 { margin-bottom: 14px; font-size: 1.13rem; }
-    h3 { margin-bottom: 8px; font-size: .98rem; }
+    [hidden] { display: none !important; }
+    html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.55 "Yu Gothic UI", "Meiryo", system-ui, sans-serif; }
+    h1, h2, h3, p { margin: 0; }
+    h2 { font-size: 14px; font-weight: 650; }
+    h3 { font-size: 12px; font-weight: 600; }
     p { color: var(--muted); }
-
-    .intro {
-      max-width: 980px;
-      margin-bottom: 22px;
-    }
-
-    .panel {
-      background: linear-gradient(145deg, rgba(32, 42, 44, .96), rgba(23, 31, 33, .98));
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 18px;
-      box-shadow: 0 16px 44px rgba(0, 0, 0, .2);
-    }
-
-    .notice {
-      border-left: 4px solid var(--accent-2);
-      background: rgba(79, 174, 127, .09);
-      border-radius: 8px;
-      padding: 12px 14px;
-      margin-bottom: 18px;
-    }
-
-    .notice p:last-child { margin-bottom: 0; }
-
-    .controls {
-      display: flex;
-      align-items: end;
-      flex-wrap: wrap;
-      gap: 12px 16px;
-      margin-bottom: 18px;
-    }
-
-    .field {
-      display: grid;
-      gap: 5px;
-      min-width: 180px;
-    }
-
-    label, .label {
-      color: var(--muted);
-      font-size: .83rem;
-      font-weight: 700;
-    }
-
-    input[type="file"], input[type="number"], select, input[type="range"], button, textarea {
-      font: inherit;
-    }
-
-    input[type="number"], select, textarea {
-      background: #11191b;
-      color: var(--text);
-      border: 1px solid #4b6060;
-      border-radius: 8px;
-    }
-
-    input[type="number"] {
-      width: 120px;
-      min-height: 38px;
-      padding: 6px 10px;
-    }
-
-    select {
-      min-height: 38px;
-      padding: 6px 10px;
-    }
-
-    input[type="range"] {
-      accent-color: var(--accent-2);
-      width: 190px;
-    }
-
+    a { color: inherit; text-decoration: none; }
+    button, input, select, textarea { font: inherit; }
     button, .file-button {
-      min-height: 38px;
-      border: 1px solid #4e6c65;
-      border-radius: 8px;
-      padding: 7px 12px;
-      background: #263836;
-      color: var(--text);
-      cursor: pointer;
-      transition: border-color .15s ease, background .15s ease, transform .05s ease;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      min-height: 34px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px;
+      background: var(--panel-2); color: var(--text); font-size: 12px; font-weight: 500;
+      line-height: 1.4; cursor: pointer; transition: background .15s, border-color .15s;
     }
-
-    button:hover, .file-button:hover { background: #315047; border-color: var(--accent-2); }
-    button:active, .file-button:active { transform: translateY(1px); }
-    button.primary { background: #286648; border-color: var(--accent-2); color: #f4fff9; }
-    button.subtle { background: #182123; }
-    button:focus-visible, .file-button:focus-within, select:focus-visible, textarea:focus-visible, input:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-
-    .file-button {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
-    }
-
-    .file-button input { display: none; }
-
-    .threshold-value { color: var(--accent); font-variant-numeric: tabular-nums; }
-    .status-line { min-height: 25px; margin: 0; font-size: .88rem; }
-    .status-line.ok { color: var(--ok); }
-    .status-line.warn { color: var(--danger); }
-    .status-line.error { color: #ff9e96; }
-
-    .workspace {
-      display: grid;
-      grid-template-columns: minmax(520px, 680px) minmax(280px, 1fr);
-      gap: 18px;
-      align-items: start;
-    }
-
-    .grid-wrap {
-      width: min(100%, 650px);
-      margin: 0 auto;
-    }
-
-    .dot-grid {
-      display: grid;
-      grid-template-columns: repeat(32, minmax(0, 1fr));
-      width: 100%;
-      aspect-ratio: 1;
-      gap: 1px;
-      padding: 5px;
-      background: #425453;
-      border: 1px solid #617772;
-      border-radius: 10px;
-      touch-action: none;
-      user-select: none;
-    }
-
-    .pixel {
-      min-width: 0;
-      min-height: 0;
-      padding: 0;
-      border: 0;
-      border-radius: 1px;
-      background: var(--off);
-      cursor: crosshair;
-      transition: background .05s linear;
-    }
-
-    .pixel.on { background: var(--on); box-shadow: inset 0 0 0 1px rgba(155, 246, 194, .36); }
-    .pixel:hover { outline: 1px solid var(--accent); outline-offset: 0; z-index: 1; }
-
-    .grid-caption {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: .78rem;
-    }
-
-    .side-stack { display: grid; gap: 16px; }
-    .preview-box {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 14px;
-    }
-
-    .canvas-card { min-width: 0; }
-    .canvas-card canvas {
-      display: block;
-      width: 100%;
-      max-width: 220px;
-      aspect-ratio: 1;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-      border: 1px solid #607771;
-      border-radius: 8px;
-      background: #d8e1dd;
-    }
-
-    .canvas-card small { display: block; margin-top: 6px; color: var(--muted); }
-
-    .button-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    .pattern-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-
-    .animation-panel { margin: 16px 0 0; }
-    .animation-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 16px; }
-    .frame-delay-field { min-width: 120px; }
-    .frame-nav { align-items: center; }
-    .frame-position {
-      min-width: 92px;
-      color: var(--accent);
-      font-size: .88rem;
-      font-variant-numeric: tabular-nums;
-      text-align: center;
-    }
-
-    .frame-strip {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 14px;
-      padding: 10px;
-      min-height: 94px;
-      border: 1px solid #334446;
-      border-radius: 8px;
-      background: #11191b;
-    }
-
-    .frame-item {
-      display: grid;
-      justify-items: center;
-      gap: 4px;
-      min-width: 78px;
-      padding: 6px;
-      background: #202d2c;
-      border-color: #455d58;
-    }
-
-    .frame-item.active {
-      background: #2c5143;
-      border-color: var(--accent-2);
-      box-shadow: 0 0 0 1px rgba(155, 246, 194, .18);
-    }
-
-    .frame-item canvas {
-      display: block;
-      width: 64px;
-      height: 64px;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-      border: 1px solid #607771;
-      background: #d8e1dd;
-    }
-
-    .frame-item span { color: var(--muted); font-size: .75rem; }
-    .frame-item.active span { color: var(--text); }
-    .sample-animation-block { display: grid; gap: 7px; margin-top: 14px; }
-
-    .text-animation-panel { margin-top: 16px; }
-    .text-animation-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 16px; }
-    .text-sequence-field { min-width: min(100%, 280px); flex: 1 1 280px; }
-    input[type="text"] {
-      width: 100%;
-      min-height: 38px;
-      padding: 6px 10px;
-      background: #11191b;
-      color: var(--text);
-      border: 1px solid #4b6060;
-      border-radius: 8px;
-    }
-    .text-animation-note { margin: 10px 0 0; font-size: .82rem; }
-
-    .encoder-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: 18px;
-      margin-top: 18px;
-      align-items: start;
-    }
-
-    .encoder-card { min-width: 0; }
-    .encoder-card h2 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-    .mode-tag { color: var(--accent); font-size: .74rem; font-weight: 400; white-space: nowrap; }
-
-    textarea {
-      display: block;
-      width: 100%;
-      min-height: 86px;
-      resize: vertical;
-      padding: 10px;
-      font-family: Consolas, "Cascadia Mono", monospace;
-      font-size: .92rem;
-      line-height: 1.45;
-      white-space: pre;
-      overflow-wrap: normal;
-      overflow-x: auto;
-    }
-
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-      margin: 10px 0;
-    }
-
-    .stat {
-      min-width: 0;
-      padding: 9px 10px;
-      background: rgba(0, 0, 0, .18);
-      border-radius: 8px;
-      color: var(--muted);
-      font-size: .8rem;
-    }
-
-    .stat strong { display: block; color: var(--text); font-size: .94rem; font-variant-numeric: tabular-nums; }
-    .stat code, code { color: var(--accent); font-family: Consolas, "Cascadia Mono", monospace; }
-
-    .safe-note {
-      min-height: 44px;
-      padding: 9px 10px;
-      border-radius: 8px;
-      background: rgba(0, 0, 0, .18);
-      color: var(--muted);
-      font-size: .82rem;
-    }
-
-    .list-label { margin: 14px 0 6px; color: var(--muted); font-size: .8rem; font-weight: 700; }
-    .safe-list {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 4px 10px;
-      max-height: 262px;
-      overflow: auto;
-      padding: 9px 10px;
-      border: 1px solid #334446;
-      border-radius: 8px;
-      background: #11191b;
-      color: #c7d7d2;
-      font-family: Consolas, "Cascadia Mono", monospace;
-      font-size: .77rem;
-      font-variant-numeric: tabular-nums;
-    }
-
+    button:hover:not(:disabled), .file-button:hover { background: #303a36; border-color: #64745b; }
+    button:active:not(:disabled), .file-button:active { transform: translateY(1px); }
+    button:disabled { opacity: .35; cursor: not-allowed; }
+    button.primary, .file-button { color: #20301a; background: var(--accent); border-color: var(--accent); }
+    button.primary:hover:not(:disabled), .file-button:hover { background: #caf4a1; }
+    button.subtle { background: transparent; }
+    button.danger:hover:not(:disabled) { color: var(--danger); border-color: #a46760; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+    .svg-library { position: absolute; width: 0; height: 0; overflow: hidden; }
+    .topbar { border-bottom: 1px solid var(--line); }
+    .topbar-inner { max-width: 1600px; min-height: 54px; padding: 0 18px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-mark { width: 28px; height: 28px; padding: 4px; border: 1px solid #56684a; border-radius: 5px; color: var(--accent); background: #212d20; }
+    .brand-name { font: 700 19px var(--mono); letter-spacing: -.6px; }
+    .brand-name span { font-weight: 400; color: var(--muted); }
+    .brand-for { color: var(--muted); font-size: 11px; border-left: 1px solid var(--line); padding-left: 12px; margin-left: 4px; }
+    .help-link { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; padding: 8px 0; }
+    .help-link:hover { color: var(--accent); }
+    main { max-width: 1600px; padding: 14px 16px; margin: auto; }
+    .workspace { display: grid; grid-template-columns: 192px minmax(0, 1fr) 282px; gap: 12px; align-items: start; }
+    .panel { min-width: 0; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); overflow: hidden; }
+    .panel-heading { min-height: 44px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); }
+    .badge { padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font: 11px/1.6 var(--mono); white-space: nowrap; }
+    .badge.green { color: var(--accent); background: #263222; border-color: #435a35; }
+    .canvas-size-field { display: flex; align-items: center; gap: 6px; }
+    .canvas-size-field label { font-size: 11px; }
+    .canvas-size-field select { width: 154px; min-height: 30px; padding: 4px 6px; }
+    .layout-details { border-bottom: 1px solid var(--line); padding: 8px 12px; }
+    .layout-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .layout-form > p, .layout-form > button { grid-column: 1 / -1; }
+    #layoutMessage.error { color: var(--danger); }
+    .panel-layout { margin-bottom: 12px; }
+    .panel-layout p { font-size: 11px; margin-bottom: 6px; }
+    .panel-map { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; list-style: none; padding: 0; margin: 0; }
+    .panel-map li { min-width: 0; padding: 5px 2px; text-align: center; border: 1px solid #44523b; border-radius: 3px; background: #232d21; font-size: 11px; color: var(--accent); }
+    .panel-map small { display: block; color: var(--muted); font: 10px/1.5 var(--mono); }
+    .panel-layout .panel-order-note { margin-top: 6px; margin-bottom: 0; font-size: 10px; }
+    .source-tabs { display: grid; grid-template-columns: repeat(3, 1fr); padding: 4px; margin: 10px; gap: 3px; background: #111618; border: 1px solid var(--line); border-radius: 6px; }
+    .source-tab { min-height: 32px; padding: 5px 3px; border-color: transparent; background: transparent; color: var(--muted); }
+    .source-tab[aria-selected="true"] { color: var(--accent); background: #2b3726; border-color: #425737; }
+    .source-content { padding: 4px 12px 16px; }
+    .source-content > h3 { margin: 2px 0 12px; }
+    #source-pattern h3 { margin-bottom: 10px; }
+    .source-content .field { margin-top: 14px; }
+    .file-button { position: relative; width: 100%; overflow: hidden; min-height: 38px; }
+    .file-button input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+    .file-button:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .upload-field > p { font-size: 11px; margin-top: 6px; text-align: center; }
+    .field { display: grid; gap: 5px; min-width: 0; }
+    label, .label { font-size: 12px; color: var(--muted); }
+    input[type="number"], input[type="text"], select, textarea { min-width: 0; width: 100%; background: #111618; border: 1px solid #424d50; border-radius: 5px; color: var(--text); padding: 7px 8px; }
+    input[type="number"], input[type="text"], select { min-height: 34px; font-size: 12px; }
+    input[type="range"] { width: 100%; margin: 7px 0; accent-color: var(--accent); }
+    .threshold-label { display: flex; align-items: center; justify-content: space-between; }
+    .threshold-value { font-family: var(--mono); color: var(--accent); }
+    .field-note { font-size: 11px; line-height: 1.7; }
+    .source-note { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 12px; }
+    .pattern-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .pattern-grid button { font-size: 11px; padding: 7px 4px; }
+    .pattern-grid button:last-child:nth-child(odd) { grid-column: 1 / -1; }
+    .sample-animation-block { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 14px; }
+    .sample-animation-block h3 { margin-bottom: 10px; }
+    .source-content .field-note { margin-top: 10px; }
+    .text-animation-controls { display: grid; gap: 12px; }
+    .text-animation-controls .field { margin: 0; }
+    .text-animation-controls button { width: 100%; }
+    #textSequence { height: 72px; min-height: 72px; font: 13px/1.5 "Yu Gothic UI", "Meiryo", sans-serif; }
+    .text-feedback { margin-top: 10px; font-size: 12px; color: var(--accent); }
+    .text-feedback:empty { display: none; }
+    .text-feedback.error { color: var(--danger); }
+    .text-samples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .text-samples button { font: 11px var(--mono); }
+    .button-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .editor-toolbar { padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--line); }
+    .tool-group { display: flex; gap: 6px; }
+    .tool-group button { min-height: 30px; padding: 5px 8px; background: transparent; font-size: 11px; }
+    .editor-hint { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .color-controls { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+    .color-mode-row { display: flex; align-items: center; gap: 8px; }
+    .color-mode-row label { flex: none; }
+    .color-mode-row select { flex: 1; }
+    .brush-controls { margin-top: 10px; }
+    .brush-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .brush-heading input { width: 64px; min-height: 30px; }
+    .brush-heading output { font: 11px var(--mono); color: var(--muted); }
+    .color-palette { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 4px; padding: 2px; }
+    .color-chip { min-width: 0; min-height: 24px; padding: 0; border: 1px solid #647074; border-radius: 3px; background: var(--chip) !important; }
+    .color-chip[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 1; }
+    @media (max-width: 480px) { .color-palette { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+    .color-controls .field-note { margin-top: 8px; }
+    .dot-grid.multilevel .pixel { background: var(--pixel-color); }
+    .dot-grid.multilevel .pixel:hover { outline-color: #d5eeff; }
+    .editor-surface { padding: 12px 16px 10px; background: #131819; }
+    .grid-wrap { --canvas-extent: max(256px, calc(100dvh - 420px)); width: min(100%, 512px, calc(var(--canvas-extent) * var(--canvas-width-factor, 1))); margin: auto; }
+    .grid-ruler { display: flex; justify-content: space-between; margin: 0 1px 5px; color: #9aab91; font: 10px var(--mono); }
+    .lcd-bezel { padding: 7px; background: #283123; border: 1px solid #59674b; border-radius: 4px; }
+    .dot-grid { position: relative; display: grid; grid-template-columns: repeat(var(--grid-width, 32), minmax(0, 1fr)); grid-template-rows: repeat(var(--grid-height, 32), minmax(0, 1fr)); width: 100%; aspect-ratio: var(--grid-width, 32) / var(--grid-height, 32); padding: 1px; gap: var(--pixel-gap, 1px); background: #a8b78e; touch-action: none; user-select: none; }
+    .dot-grid::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1; background-image: linear-gradient(to right, #4a603a 1px, transparent 1px), linear-gradient(to bottom, #4a603a 1px, transparent 1px); background-size: calc(100% / var(--panel-columns, 1)) 100%, 100% calc(100% / var(--panel-rows, 1)); }
+    .pixel { display: block; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; background: var(--off); cursor: crosshair; transition: none; }
+    .pixel.on { background: var(--on); }
+    .pixel:hover:not(:disabled) { background: #90a76f; outline: 1px solid var(--on); outline-offset: -1px; }
+    .pixel.on:hover:not(:disabled) { background: #40563a; }
+    .pixel:active:not(:disabled) { transform: none; }
+    .pixel:focus-visible { outline: 2px solid #152714; outline-offset: -2px; z-index: 1; }
+    .grid-caption { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 7px; font-size: 10px; color: var(--muted); }
+    .pixel-legend { display: flex; align-items: center; gap: 5px; }
+    .swatch { width: 8px; height: 8px; display: inline-block; background: var(--off); border: 1px solid #7f9070; }
+    .swatch.on { background: var(--on); margin-left: 6px; }
+    .timeline { border-top: 1px solid var(--line); padding: 10px 12px; }
+    .timeline-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .animation-tools { display: flex; gap: 5px; }
+    .animation-tools button { min-height: 28px; padding: 4px 8px; font-size: 11px; }
+    .frame-strip { display: flex; gap: 7px; overflow-x: auto; margin: 7px 0; padding: 2px 1px 5px; scrollbar-color: #58684d #111618; scrollbar-width: thin; }
+    .frame-item { flex: 0 0 auto; min-width: 50px; display: grid; justify-items: center; gap: 3px; padding: 5px; background: #121718; }
+    .frame-item.active { background: #293624; border-color: var(--accent); }
+    .frame-item canvas { display: block; width: calc(36px * var(--bitmap-width-factor, 1)); height: auto; align-self: center; image-rendering: pixelated; }
+    .frame-item { grid-template-rows: 36px auto; }
+    .frame-item span { color: var(--muted); font: 10px var(--mono); }
+    .frame-item.active span { color: var(--accent); }
+    .animation-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .animation-controls button { min-height: 30px; padding: 5px 8px; font-size: 11px; }
+    .frame-delay-field { display: flex; align-items: center; gap: 5px; }
+    .frame-delay-field label { font-size: 11px; }
+    .frame-delay-field input { width: 66px; min-height: 30px; padding: 4px 6px; }
+    .frame-delay-field .label { font-size: 11px; }
+    .frame-nav { display: flex; align-items: center; gap: 6px; }
+    .frame-nav button { min-width: 26px; padding: 3px 7px; }
+    .frame-position { color: var(--muted); font: 11px var(--mono); white-space: nowrap; }
+    .inspector-section + .inspector-section { border-top: 1px solid var(--line); }
+    .panel-body { padding: 12px; }
+    .preview-box { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .canvas-card { min-width: 0; text-align: center; }
+    .preview-mat { min-height: 96px; padding: 8px; background: #111618; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+    .canvas-card canvas { display: block; width: calc(80px * var(--bitmap-width-factor, 1)); max-width: 100%; height: auto; background: var(--off); image-rendering: pixelated; }
+    .canvas-card small { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .output-label { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
+    .output-label span { color: var(--muted); font: 10px var(--mono); }
+    textarea { display: block; min-height: 90px; height: 90px; resize: vertical; font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .output-hint { font-size: 11px; margin-top: 6px; }
+    .stats { display: flex; align-items: center; gap: 18px; margin: 10px 0 12px; }
+    .stat { display: flex; align-items: baseline; gap: 5px; color: var(--muted); font-size: 11px; }
+    .stat strong { color: var(--text); font: 17px var(--mono); }
+    .output-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .output-actions button { min-height: 36px; }
+    .decode-button { width: 100%; margin-top: 7px; }
+    .decode-layout-field { margin-top: 10px; }
+    .verification { margin-top: 10px; padding: 8px 9px; color: var(--muted); border: 1px solid var(--line); border-radius: 5px; font-size: 11px; }
+    .verification.ok { color: var(--ok); border-color: #405636; background: #242f22; }
+    .verification.bad { color: var(--danger); border-color: #80524b; background: #322422; }
+    .verification.stale { color: #e7c68a; border-color: #665336; background: #30291f; }
+    .output-feedback { font-size: 11px; color: var(--accent); margin-top: 8px; }
+    .output-feedback:empty { display: none; }
+    summary { list-style: none; cursor: pointer; }
+    summary::-webkit-details-marker { display: none; }
+    .disclosure-label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
+    .disclosure-label::after { content: "+"; margin-left: auto; font: 16px var(--mono); }
+    details[open] > .disclosure-label::after { content: "−"; }
+    .code-details { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 12px; }
+    .safe-list { max-height: 200px; overflow: auto; margin-top: 8px; padding: 7px; border-radius: 4px; background: #111618; font: 10px/1.7 var(--mono); color: var(--muted); }
     .safe-list > div { white-space: nowrap; }
-    .empty-list { grid-column: 1 / -1; color: var(--muted); }
-
-    .verification {
-      margin-top: 12px;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #3e5650;
-      color: var(--muted);
-      font-size: .84rem;
+    .workspace-status { display: flex; align-items: start; gap: 8px; padding: 10px 2px 0; }
+    .status-dot { width: 5px; height: 5px; background: var(--accent); border-radius: 50%; margin-top: 7px; flex: none; }
+    .status-line { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+    .status-line.ok { color: var(--ok); }
+    .status-line.error, .status-line.warn { color: var(--danger); }
+    .technical-details { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+    .technical-content { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 16px 0; }
+    .technical-content h3 { margin-bottom: 8px; }
+    .technical-content p { font-size: 12px; margin-bottom: 8px; overflow-wrap: anywhere; }
+    code { color: var(--accent); font-family: var(--mono); }
+    .page-footer { display: flex; justify-content: space-between; gap: 10px; padding-top: 10px; color: var(--muted); font-size: 11px; }
+    .footer-brand { font-family: var(--mono); }
+    .resize-dialog { width: min(440px, calc(100% - 32px)); padding: 20px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; }
+    .resize-dialog::backdrop { background: #000a; }
+    .resize-dialog p { margin-top: 12px; font-size: 13px; }
+    .dialog-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: 8px; margin-top: 20px; }
+    @media (min-width: 1300px) {
+      .workspace { grid-template-columns: 220px minmax(0, 1fr) 310px; gap: 16px; }
+      main { padding: 16px 20px; }
+      .source-content { padding: 6px 14px 18px; }
     }
-
-    .verification.ok { color: var(--ok); border-color: #4f9d78; background: rgba(79, 174, 127, .08); }
-    .verification.bad { color: var(--danger); border-color: #a45c55; background: rgba(150, 54, 46, .1); }
-    .verification.stale { color: #f1d494; border-color: #806b3f; background: rgba(128, 107, 63, .1); }
-
-    .legend {
-      display: grid;
-      gap: 7px;
-      margin-top: 13px;
-      color: var(--muted);
-      font-size: .82rem;
+    @media (max-width: 1100px) {
+      .editor-hint { display: none; }
+      .editor-toolbar { justify-content: center; }
     }
-
-    .legend-row { display: flex; gap: 9px; align-items: start; }
-    .swatch { flex: 0 0 auto; width: 15px; height: 15px; border-radius: 3px; margin-top: 3px; border: 1px solid #6d8580; }
-    .swatch.on { background: var(--on); }
-    .swatch.off { background: var(--off); }
-
-    .footer-note {
-      margin: 20px 0 0;
-      color: var(--muted);
-      font-size: .82rem;
+    @media (max-width: 880px) {
+      .workspace { grid-template-columns: minmax(0, 1fr) 280px; }
+      .source-panel { grid-column: 1 / -1; }
+      .source-panel > .panel-heading { display: none; }
+      .source-tabs { width: 240px; margin: 10px 12px 6px; }
+      .source-content { padding: 6px 12px 12px; }
+      #source-image:not([hidden]) { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; gap: 12px; }
+      #source-image .field { margin: 0; }
+      #source-image .source-note { grid-column: 1 / -1; border: 0; margin: 0; padding: 0; }
+      #source-pattern:not([hidden]) { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .sample-animation-block { margin: 0; padding: 0; border: 0; }
+      .pattern-grid { grid-template-columns: repeat(3, 1fr); }
+      .pattern-grid button:last-child:nth-child(odd) { grid-column: auto; }
+      .text-animation-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; }
+      .text-sequence-field { grid-column: 1 / -1; }
+      .text-animation-controls button { grid-column: 1 / -1; width: auto; justify-self: start; }
+      .grid-wrap { --canvas-extent: max(256px, calc(100dvh - 540px)); }
+      .animation-controls { gap: 8px 12px; }
     }
-
-    @media (max-width: 1020px) {
-      .workspace { grid-template-columns: 1fr; }
-      .grid-wrap { max-width: 680px; }
-      .side-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    @media (max-width: 680px) {
+      main { padding: 10px; }
+      .workspace { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+      .source-panel { grid-column: auto; }
+      .topbar-inner { padding: 0 12px; }
+      .brand-name { font-size: 17px; } .brand-mark { width: 26px; height: 26px; }
+      .brand-for { display: none; } .help-link { font-size: 11px; }
+      #source-image:not([hidden]) { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .upload-field { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
+      .upload-field .file-button { width: auto; flex: 1; }
+      .upload-field > p { margin: 0; }
+      #source-image .field-note { font-size: 10px; }
+      #source-pattern:not([hidden]) { grid-template-columns: 1fr; gap: 16px; }
+      .pattern-grid { grid-template-columns: repeat(3, 1fr); }
+      .text-animation-controls { grid-template-columns: 1fr 1fr; }
+      .text-sequence-field { grid-column: 1 / -1; }
+      .text-animation-controls button { width: 100%; }
+      .editor-toolbar { justify-content: start; }
+      .editor-surface { padding: 12px 10px 10px; }
+      .grid-wrap { --canvas-extent: 440px; }
+      .grid-caption { font-size: 10px; }
+      .timeline { padding: 10px; }
+      .animation-tools button { padding: 4px 7px; }
+      .animation-controls { gap: 10px; }
+      .frame-delay-field { margin-left: auto; }
+      .frame-nav { margin-left: auto; }
+      .canvas-card canvas { width: calc(96px * var(--bitmap-width-factor, 1)); }
+      .preview-mat { min-height: 112px; }
+      .technical-content { grid-template-columns: 1fr; gap: 12px; }
+      .page-footer { flex-wrap: wrap; }
     }
-
-    @media (max-width: 720px) {
-      main { width: min(100% - 20px, 640px); padding-top: 18px; }
-      .panel { padding: 13px; border-radius: 12px; }
-      .encoder-grid, .side-stack { grid-template-columns: 1fr; }
-      .preview-box { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .stats, .safe-list { grid-template-columns: 1fr; }
-      .controls, .animation-controls { align-items: stretch; }
-      .field { min-width: 0; width: 100%; }
-      input[type="range"] { width: 100%; }
-      input[type="number"] { width: 100%; }
-    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition: none !important; } }
   </style>
 </head>
 <body>
+  <svg class="svg-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/></symbol>
+    <symbol id="i-erase" viewBox="0 0 24 24"><path d="m4 13 9-9a2 2 0 0 1 3 0l5 5a2 2 0 0 1 0 3l-9 9H7l-3-3a3 3 0 0 1 0-5Z"/><path d="m9 8 9 9M12 21h9"/></symbol>
+    <symbol id="i-invert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-fill" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3v.1"/></symbol>
+    <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14c2 4 6 4 8 0M8 8v2m8-2v2"/></symbol>
+    <symbol id="i-checker" viewBox="0 0 24 24"><path d="M3 3h9v9H3zm9 9h9v9h-9z" fill="currentColor" stroke="none"/><rect x="3" y="3" width="18" height="18"/></symbol>
+  </svg>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M0 0h4v4H0zm8 0h4v4H8zm8 0h4v4h-4zM0 8h4v4H0zm8 0h4v4H8zm8 0h4v4h-4zM0 16h4v4H0zm8 0h4v4H8zm8 0h4v4h-4z"/></svg>
+        <h1 class="brand-name">LCD32 <span>Encoder</span></h1>
+        <span class="brand-for">Resonite用</span>
+      </div>
+      <a class="help-link" href="#technicalDetails"><svg class="icon" aria-hidden="true"><use href="#i-help"/></svg>使い方・仕様</a>
+    </div>
+  </header>
   <main>
-    <section class="intro">
-      <h1>32×32 LCD Encoder</h1>
-      <p>32×32モノクロ画像を、Resoniteで扱えるUTF-16 code unit列へ変換します。外部ライブラリ不要・このHTMLをブラウザで開くだけで動作します。</p>
-      <div class="notice">
-        <p><strong>ビット順:</strong> row-major（<code>bitIndex = Y × 32 + X</code>）。各行は <code>X=0</code> が左端で、<code>bit 0</code> が左端です。1行の前半16dotを1個目、後半16dotを2個目のushortに格納します。</p>
-        <p><strong>UTF-16の注意:</strong> 画面の長さ表示・デコードはUnicodeの見た目の文字数ではなく、常にUTF-16 code unit数（JavaScriptの <code>String.length</code>）で行います。</p>
-        <p><strong>アニメーション:</strong> Safe出力は <code>frame1/frame2/...</code> 形式です。各フレームは69 code units、区切り文字 <code>/</code> は1 code unitです。</p>
-      </div>
-    </section>
-
-    <section class="panel">
-      <h2>画像とドットグリッド</h2>
-      <div class="controls">
-        <label class="file-button">
-          PNG / 画像を読み込む
-          <input id="imageInput" type="file" accept="image/png,image/*">
-        </label>
-        <div class="field">
-          <label for="binarizeMode">白黒化の基準</label>
-          <select id="binarizeMode">
-            <option value="luma">輝度（暗い色をON）</option>
-            <option value="alpha">Alpha（不透明をON）</option>
-          </select>
+    <div class="workspace">
+      <section class="panel source-panel" aria-labelledby="sourceTitle">
+        <div class="panel-heading"><h2 id="sourceTitle">素材をつくる</h2></div>
+        <div class="source-tabs" role="tablist" aria-label="素材の種類">
+          <button id="source-image-tab" class="source-tab" role="tab" type="button" aria-selected="true" aria-controls="source-image" data-source="image">画像</button>
+          <button id="source-pattern-tab" class="source-tab" role="tab" type="button" aria-selected="false" aria-controls="source-pattern" tabindex="-1" data-source="pattern">パターン</button>
+          <button id="source-text-tab" class="source-tab" role="tab" type="button" aria-selected="false" aria-controls="source-text" tabindex="-1" data-source="text">文字</button>
         </div>
-        <div class="field">
-          <label for="threshold">しきい値: <span id="thresholdValue" class="threshold-value">128</span></label>
-          <input id="threshold" type="range" min="0" max="255" value="128">
+        <div id="source-image" class="source-content" role="tabpanel" aria-labelledby="source-image-tab">
+          <div class="upload-field">
+            <label class="file-button"><svg class="icon" aria-hidden="true"><use href="#i-image"/></svg>画像を選ぶ<input id="imageInput" type="file" accept="image/png,image/*" aria-label="画像を選ぶ"></label>
+            <p>PNG・JPGなど</p>
+          </div>
+          <div id="binarizeField" class="field"><label for="binarizeMode">白黒化の基準</label><select id="binarizeMode"><option value="luma">輝度（暗い色をON）</option><option value="alpha">透明度（不透明をON）</option></select></div>
+          <div id="thresholdField" class="field"><label class="threshold-label" for="threshold">しきい値 <span id="thresholdValue" class="threshold-value">128</span></label><input id="threshold" type="range" min="0" max="255" value="128"></div>
+          <p id="imageColorHint" class="field-note" hidden></p>
+          <p class="field-note source-note">設定してから画像を選択。<span id="importSize">32×32</span>に縮小して、現在のフレームに読み込みます。</p>
         </div>
-        <div class="button-row">
-          <button id="clearButton" type="button">Clear</button>
-          <button id="invertButton" type="button">Invert</button>
-          <button id="fillButton" type="button">Fill</button>
-        </div>
-      </div>
-      <p id="imageStatus" class="status-line" aria-live="polite">空のグリッドです。セルをクリック、またはドラッグして編集できます。</p>
-
-      <div class="panel animation-panel">
-        <h3>アニメーション / フレーム</h3>
-        <div class="animation-controls">
-          <div class="field frame-delay-field">
-            <label for="frameDelay">再生間隔（ms）</label>
-            <input id="frameDelay" type="number" min="50" max="5000" step="10" value="200">
-          </div>
-          <div class="button-row">
-            <button id="addFrameButton" type="button">空フレーム追加</button>
-            <button id="duplicateFrameButton" type="button">現在を複製</button>
-            <button id="deleteFrameButton" type="button">現在を削除</button>
-          </div>
-          <div class="button-row frame-nav">
-            <button id="previousFrameButton" type="button" aria-label="前のフレーム">◀</button>
-            <span id="framePosition" class="frame-position">Frame 1 / 1</span>
-            <button id="nextFrameButton" type="button" aria-label="次のフレーム">▶</button>
-            <button id="playButton" class="primary" type="button">▶ 再生</button>
-            <button id="stopButton" type="button">■ 停止</button>
-          </div>
-        </div>
-        <div id="frameStrip" class="frame-strip" role="list" aria-label="animation frames"></div>
-        <div class="sample-animation-block">
-          <span class="label">サンプルアニメーション</span>
-          <div class="button-row">
-            <button type="button" data-animation="blink">まばたき</button>
-            <button type="button" data-animation="scanner">走査線</button>
-            <button type="button" data-animation="ball">跳ねる球</button>
-            <button type="button" data-animation="spinner">回転バー</button>
-            <button type="button" data-animation="treasure">宝箱→アイテム</button>
-          </div>
-        </div>
-        <p class="footer-note">フレームを選択して編集できます。Safe出力の <code>/</code> で分割すると、各フレームを順番に復号できます。</p>
-      </div>
-
-      <div class="panel text-animation-panel">
-        <h3>文字アニメーション / モーフィング</h3>
-        <div class="text-animation-controls">
-          <div class="field text-sequence-field">
-            <label for="textSequence">表示する文字列（1文字ずつ順番に表示）</label>
-            <input id="textSequence" type="text" value="HELLO" maxlength="16" spellcheck="false">
-          </div>
-          <div class="field">
-            <label for="morphSteps">変形フレーム数</label>
-            <input id="morphSteps" type="number" min="2" max="20" step="1" value="8">
-          </div>
-          <div class="field">
-            <label for="textHoldFrames">各文字の停止フレーム</label>
-            <input id="textHoldFrames" type="number" min="0" max="20" step="1" value="3">
-          </div>
-          <button id="generateTextButton" class="primary" type="button">文字モーフを生成</button>
-        </div>
-        <p class="text-animation-note">前の文字のドットから次の文字のドットへ、揺らぎを加えながら徐々に変形します。入力はUnicode文字単位で進みますが、出力の長さはUTF-16 code unit数で表示します。</p>
-        <div class="sample-animation-block">
-          <span class="label">サンプル文字列</span>
-          <div class="button-row">
-            <button type="button" data-text-sample="HELLO">HELLO</button>
-            <button type="button" data-text-sample="RESONITE">RESONITE</button>
-            <button type="button" data-text-sample="LCD 32">LCD 32</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="workspace">
-        <div class="grid-wrap">
-          <div id="dotGrid" class="dot-grid" role="grid" aria-label="32 x 32 editable pixel grid"></div>
-          <div class="grid-caption"><span>左上: X=0, Y=0</span><span>ON=1 / OFF=0</span><span>右下: X=31, Y=31</span></div>
-        </div>
-
-        <div class="side-stack">
-          <div class="panel">
-            <h3>プレビュー</h3>
-            <div class="preview-box">
-              <div class="canvas-card">
-                <canvas id="editorPreview" width="32" height="32" aria-label="current editor preview"></canvas>
-                <small>現在のグリッド</small>
-              </div>
-              <div class="canvas-card">
-                <canvas id="decodedPreview" width="32" height="32" aria-label="decoded preview"></canvas>
-                <small id="decodedLabel">未デコード</small>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <h3>テストパターン</h3>
+        <div id="source-pattern" class="source-content" role="tabpanel" aria-labelledby="source-pattern-tab" hidden>
+          <div>
+            <h3>ドット絵</h3>
             <div class="pattern-grid">
-              <button type="button" data-pattern="x">X</button>
-              <button type="button" data-pattern="vertical">縦線</button>
-              <button type="button" data-pattern="horizontal">横線</button>
-              <button type="button" data-pattern="checker">チェッカー</button>
-              <button type="button" data-pattern="smile">スマイル顔</button>
+              <button type="button" data-pattern="smile"><svg class="icon" aria-hidden="true"><use href="#i-smile"/></svg>スマイル</button>
+              <button type="button" data-pattern="checker"><svg class="icon" aria-hidden="true"><use href="#i-checker"/></svg>チェック</button>
+              <button type="button" data-pattern="x">╳ クロス</button><button type="button" data-pattern="vertical">│ 縦線</button><button type="button" data-pattern="horizontal">─ 横線</button>
             </div>
-            <p class="footer-note">パターンを適用すると、Safe modeのエンコード→内部デコード→1024pixel比較を自動で実行します。</p>
+            <p class="field-note">現在のフレームに適用します。</p>
+          </div>
+          <div class="sample-animation-block">
+            <h3>アニメーション</h3>
+            <div class="pattern-grid"><button type="button" data-animation="blink">まばたき</button><button type="button" data-animation="scanner">走査線</button><button type="button" data-animation="ball">跳ねる球</button><button type="button" data-animation="spinner">回転バー</button><button type="button" data-animation="treasure">宝箱 → アイテム</button></div>
+            <p class="field-note">全フレームを置き換えます。</p>
           </div>
         </div>
+        <div id="source-text" class="source-content" role="tabpanel" aria-labelledby="source-text-tab" hidden>
+          <div class="text-animation-controls">
+            <div class="field text-sequence-field"><label for="textSequence">表示する文字（最大64文字・改行可）</label><textarea id="textSequence" maxlength="128" spellcheck="false" aria-describedby="textInputHint">HELLO</textarea><p id="textInputHint" class="field-note">複数文字をまとめて表示。改行で段を分けられます。</p></div>
+            <div class="field"><label for="textEffect">動き</label><select id="textEffect"><option value="static">静止画</option><optgroup label="スクロール"><option value="scroll-left">← 左へ</option><option value="scroll-right">→ 右へ</option><option value="scroll-up">↑ 上へ</option><option value="scroll-down">↓ 下へ</option></optgroup><optgroup label="演出"><option value="typewriter">タイプライター</option><option value="blink">点滅</option><option value="explode">爆発して散る</option><option value="assemble">粒が集まる</option><option value="morph">変形して現れる</option><option value="morph-letters">1文字ずつ変形</option></optgroup></select></div>
+            <div class="field"><label for="textFontSize">文字サイズ</label><select id="textFontSize"><option value="auto">自動で収める</option><option value="6">6 px</option><option value="8">8 px</option><option value="10">10 px</option><option value="12">12 px</option><option value="16">16 px</option><option value="24">24 px</option><option value="32">32 px</option><option value="48">48 px</option></select></div>
+            <div id="textStepsField" class="field" hidden><label for="morphSteps">動きのフレーム数</label><input id="morphSteps" type="number" min="2" max="32" step="1" value="12"></div>
+            <div id="textScrollField" class="field" hidden><label for="textScrollStep">移動ドット / フレーム</label><input id="textScrollStep" type="number" min="1" max="8" step="1" value="2"></div>
+            <div id="textTypingField" class="field" hidden><label for="textTypingDelay">1文字の表示フレーム</label><input id="textTypingDelay" type="number" min="1" max="10" step="1" value="2"></div>
+            <div id="textHoldField" class="field" hidden><label for="textHoldFrames">停止フレーム数</label><input id="textHoldFrames" type="number" min="0" max="20" step="1" value="4"></div>
+            <button id="generateTextButton" class="primary" type="button">文字を配置</button>
+          </div>
+          <p id="textFeedback" class="text-feedback" role="status"></p>
+          <p id="textEffectHint" class="field-note">現在のフレームに配置します。Ctrl+Enterでも生成できます。</p>
+          <div class="text-samples" aria-label="選ぶと設定して生成する文字サンプル"><button type="button" data-text-sample="HELLO" data-text-effect="static">HELLO</button><button type="button" data-text-sample="HELLO&#10;WORLD" data-text-effect="static">2行表示</button><button type="button" data-text-sample="こんにちは" data-text-effect="scroll-left">日本語スクロール</button><button type="button" data-text-sample="BOOM!" data-text-effect="explode">爆発</button></div>
+        </div>
+      </section>
+
+      <section class="panel canvas-panel" aria-labelledby="editorTitle">
+        <div class="panel-heading"><h2 id="editorTitle">キャンバス</h2><div class="canvas-size-field"><label for="canvasSize">サイズ</label><select id="canvasSize" title="幅×高さ。左上を基準に全フレームのサイズを変更"><option value="32x32">32×32（1枚）</option><option value="32x64">32×64（縦2枚）</option><option value="64x32">64×32（横2枚）</option><option value="64x64">64×64（2×2枚）</option><option value="96x32">96×32（横3枚）</option><option value="32x96">32×96（縦3枚）</option><option id="customSizeOption" value="custom-current" hidden>指定した配置</option><option value="custom">枚数を指定…</option></select></div></div>
+        <details id="layoutDetails" class="layout-details"><summary class="disclosure-label">パネルの枚数で指定</summary><form id="layoutForm" class="layout-form"><div class="field"><label for="panelColumns">横の枚数</label><input id="panelColumns" type="number" min="1" max="8" step="1" value="1" required></div><div class="field"><label for="panelRows">縦の枚数</label><input id="panelRows" type="number" min="1" max="8" step="1" value="1" required></div><p class="field-note">1枚は32×32。横・縦は各1〜8枚、合計16枚まで。</p><p id="layoutMessage" class="field-note" aria-live="polite">32×32・1枚</p><button id="applyLayoutButton" type="submit">配置を適用</button></form></details>
+        <div class="color-controls">
+          <div class="color-mode-row"><label for="pixelMode">ドットの出力</label><select id="pixelMode"><option value="mono">1bit · モノクロ</option><option value="gray32">5bit · 32段階の明度</option><option value="rgb32">5bit · 固定32色（RGB221）</option></select></div>
+          <div id="brushControls" class="brush-controls" hidden>
+            <div class="brush-heading"><label for="brushValue">描画する値</label><input id="brushValue" type="number" min="0" max="31" step="1" value="31"><output id="brushDescription" for="brushValue"></output><button id="gradientButton" type="button">32段階を並べる</button></div>
+            <div id="colorPalette" class="color-palette" role="group" aria-label="描画する値を選ぶ"></div>
+          </div>
+          <p id="colorModeHint" class="field-note">1ドットは0 / 1。従来の69単位 / パネルです。</p>
+        </div>
+        <div class="editor-toolbar">
+          <div class="tool-group" aria-label="グリッド操作">
+            <button id="clearButton" class="danger" type="button" title="現在のフレームをすべて消す"><svg class="icon" aria-hidden="true"><use href="#i-erase"/></svg>消去</button>
+            <button id="invertButton" type="button" title="現在のフレームのONとOFFを入れ替える"><svg class="icon" aria-hidden="true"><use href="#i-invert"/></svg>反転</button>
+            <button id="fillButton" type="button" title="現在のフレームをすべてONにする"><svg class="icon" aria-hidden="true"><use href="#i-fill"/></svg>塗りつぶし</button>
+          </div>
+          <span class="editor-hint">クリック・ドラッグで編集</span>
+        </div>
+        <div class="editor-surface">
+          <div class="grid-wrap">
+            <div id="gridRuler" class="grid-ruler" aria-hidden="true"><span>0</span><span>8</span><span>16</span><span>24</span><span>31</span></div>
+            <div class="lcd-bezel"><div id="dotGrid" class="dot-grid" role="grid" aria-label="32×32の編集用ドットグリッド" aria-describedby="gridHint"></div></div>
+            <div class="grid-caption"><span id="gridHint">クリック・ドラッグで描画</span><span id="pixelLegend" class="pixel-legend"><i class="swatch" aria-hidden="true"></i>OFF<i class="swatch on" aria-hidden="true"></i>ON</span></div>
+          </div>
+        </div>
+        <section class="timeline" aria-labelledby="animationTitle">
+          <div class="timeline-heading">
+            <h3 id="animationTitle">フレーム</h3>
+            <div class="animation-tools"><button id="addFrameButton" type="button">＋ 追加</button><button id="duplicateFrameButton" type="button">複製</button><button id="deleteFrameButton" class="subtle danger" type="button">削除</button></div>
+          </div>
+          <div id="frameStrip" class="frame-strip" role="group" aria-label="アニメーションのフレーム"></div>
+          <div class="animation-controls">
+            <div class="button-row"><button id="playButton" class="primary" type="button">▶ 再生</button><button id="stopButton" class="subtle" type="button">■ 停止</button></div>
+            <div class="field frame-delay-field"><label for="frameDelay">間隔</label><input id="frameDelay" type="number" min="50" max="5000" step="10" value="200"><span class="label">ms</span></div>
+            <div class="frame-nav"><button id="previousFrameButton" type="button" aria-label="前のフレーム">‹</button><span id="framePosition" class="frame-position">1 / 1</span><button id="nextFrameButton" type="button" aria-label="次のフレーム">›</button></div>
+          </div>
+        </section>
+      </section>
+
+      <aside class="panel inspector-panel" aria-label="プレビューと出力">
+        <section class="inspector-section" aria-labelledby="previewTitle">
+          <div class="panel-heading"><h2 id="previewTitle">プレビュー</h2><span id="previewMode" class="badge">1bit</span></div>
+          <div class="panel-body preview-box">
+            <div class="canvas-card"><div class="preview-mat"><canvas id="editorPreview" width="32" height="32" aria-label="現在のフレームのプレビュー"></canvas></div><small>編集中</small></div>
+            <div class="canvas-card"><div class="preview-mat"><canvas id="decodedPreview" width="32" height="32" aria-label="出力文字列を復元したプレビュー"></canvas></div><small id="decodedLabel">復元結果</small></div>
+          </div>
+        </section>
+        <section class="inspector-section" aria-labelledby="outputTitle">
+          <div class="panel-heading"><h2 id="outputTitle">文字列に変換</h2><span class="badge green">Safe形式</span></div>
+          <div class="panel-body">
+            <div id="panelLayout" class="panel-layout" hidden>
+              <p id="panelSummary"></p>
+              <ol id="panelMap" class="panel-map" aria-label="正面から見たパネル配置と分割後の配列の位置"></ol>
+              <p class="panel-order-note">左上から右へ、次に下の段へ。<code>|</code>で分割して番号順に渡します（配列の位置は番号−1）。</p>
+            </div>
+            <div class="output-label"><label for="safeOutput">出力文字列</label><span id="frameUnits">69単位 / フレーム</span></div>
+            <textarea id="safeOutput" spellcheck="false" aria-describedby="outputHint"></textarea>
+            <p id="outputHint" class="output-hint">空白に見える文字も含まれます。</p>
+            <div class="stats"><div class="stat"><strong id="safeLength">0</strong>UTF-16単位</div><div class="stat"><strong id="safeFrameCount">1</strong>フレーム</div></div>
+            <div class="output-actions"><button id="safeEncodeButton" class="primary" type="button"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>エンコード</button><button id="safeCopyButton" type="button"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>コピー</button></div>
+            <div id="decodeLayoutField" class="field decode-layout-field" hidden><label for="decodeLayout">復元する配置（幅×高さ）</label><select id="decodeLayout" aria-describedby="decodeLayoutHint"><option value="">配置を選択</option></select><p id="decodeLayoutHint" class="field-note">パネル数は自動判定します。並べ方が複数ある場合は選択してください。</p></div>
+            <div id="decodeModeField" class="field decode-layout-field" hidden><label for="decodeMode">5bitの表示方法</label><select id="decodeMode"><option value="gray32">32段階の明度</option><option value="rgb32">固定32色（RGB221）</option></select><p class="field-note">1bit / 5bitは長さで判定。明度 / カラーは文字列だけでは区別できません。</p></div>
+            <button id="safeDecodeButton" class="subtle decode-button" type="button">文字列をデコードして確認</button>
+            <p id="outputFeedback" class="output-feedback" role="status"></p>
+            <div id="safeVerification" class="verification stale" aria-live="polite">検証待ち</div>
+            <details id="codeDetails" class="code-details"><summary class="disclosure-label">表示中のフレームの値を確認</summary><div id="safeList" class="safe-list"><div class="empty-list">エンコードすると表示されます。</div></div></details>
+          </div>
+        </section>
+      </aside>
+    </div>
+    <div class="workspace-status"><i class="status-dot" aria-hidden="true"></i><p id="imageStatus" class="status-line" role="status">キャンバスに直接描くか、素材から画像・パターン・文字を選んでください。</p></div>
+    <details id="technicalDetails" class="technical-details">
+      <summary class="disclosure-label"><svg class="icon" aria-hidden="true"><use href="#i-help"/></svg>使い方・エンコード仕様</summary>
+      <div class="technical-content">
+        <div>
+          <h3>描く → 確認する → コピーする</h3>
+          <p>画像を読み込むか、グリッドをクリック・ドラッグして編集します。キーボードではグリッドにTabで移動し、矢印キーでドットを選び、SpaceまたはEnterで切り替えられます。</p>
+          <p>「エンコード」で全フレームを文字列に変換し、「コピー」でResoniteへ持ち出せます。変換時にすべてのドットが正しく復元できるか自動で検証します。</p>
+          <p>「文字」では複数文字・改行をまとめて表示できます。「静止画」は現在のフレームに配置し、文字サイズは自動調整か指定サイズを選べます。</p>
+          <p>動きは上下左右のスクロール、タイプライター、点滅、爆発、集合、変形から選べます。従来の「1文字ずつ変形」も使えます。アニメーション生成は全フレームを置き換えます。移動量や停止フレームを設定し、再生速度はフレーム欄の「間隔」で調整します。</p>
+          <p>文字は改行を含め64文字、生成は240フレームまでです。スクロールは画面の外から入り、反対側へ抜けます。長い文章は移動量を増やすとフレーム数を減らせます。Ctrl+Enterでも生成できます。</p>
+          <p>「デコード」はパネル数を自動判定して右側のプレビューに復元します。並べ方が複数ある場合は「復元する配置」で選びます。編集キャンバスと同じサイズ・表示方法の場合は全フレームを比較します。編集グリッドには反映しません。</p>
+        </div>
+        <div>
+          <h3>Safe形式の仕様</h3>
+          <p>「ドットの出力」で1bit・32段階の明度・固定32色を選びます。5bitは値0〜31を保存し、明度は<code>値 / 31</code>（0＝黒、31＝白）です。描画パレットは文字・パターン・塗りつぶしにも使えます。Shiftを押しながら描くと値0で消去します。</p>
+          <p>固定32色はRGB221です。Resonite側のRGB（0〜1）は<code>R = floor(値 / 8) / 3</code>、<code>G = floor(値 / 2) % 4 / 3</code>、<code>B = 値 % 2</code>。明度とカラーは同じ値の表示方法で、切り替えても値は変わりません。画像は選択した方法で減色し、透明部分を黒に合成します。</p>
+          <p>サイズは幅×高さです。「パネルの枚数で指定」で横・縦それぞれ1〜8枚、合計16枚まで配置できます。96×32は横3×縦1枚、96×64は横3×縦2枚です。各パネルは32×32のSafe形式で、回転や反転は行いません。</p>
+          <p>ピクセルはパネル内の左上から横方向に並ぶrow-major順です。<code>i = Y × 32 + X</code>。1bitは15ドットずつ格納して69単位。最後は4bitで、残り11bitは0です。5bitは3ドットずつ格納して342単位。最後は1ドットの5bitで、残り10bitは0です。行の途中には0埋めしません。</p>
+          <p><code>codeUnit = value + 0x3000</code>。使用範囲は<code>U+3000–U+AFFF</code>で、サロゲートや制御文字を含みません。復号時は<code>ToUTF16(character) - 0x3000</code>で値を戻します。</p>
+          <p>1bitでは各69単位、5bitでは各342単位のパネルを<code>|</code>で区切ります。パネル数をPとすると1フレームは1bitで<code>70 × P − 1</code>、5bitで<code>343 × P − 1</code>単位です（5bitの3枚なら1028単位、4枚なら1371単位）。並び順は左上から右へ、次に下の段へ。未使用bitの0埋めは各パネルごとに入ります。</p>
+          <p>5bitの1文字は<code>p0 + p1 × 32 + p2 × 1024 + 0x3000</code>です。復元はパネルの<code>floor(i / 3)</code>番目の文字から0x3000を引き、<code>(値 &gt;&gt; ((i % 3) × 5)) &amp; 31</code>でドット値を取り出します。1bit / 5bitはパネル長で判定できますが、明度 / カラーの指定は別途共有してください。5bit出力を使うにはResonite側にもこの復号処理が必要です。</p>
+          <p>アニメーションは<code>frame1/frame2/...</code>のように<code>/</code>で区切ります。Resonite側では先に<code>/</code>でフレームを分割し、選んだフレームを<code>|</code>で分割してください。枚数は自動判定できますが、配置は別途指定します。たとえば4枚なら64×64・128×32・32×128が考えられます。全パネルで同じフレーム番号と再生タイミングを使います。以前の区切りなし276単位の文字列は、従来どおり64×64としてデコードできます。</p>
+          <p>サイズ変更は全フレームに適用し、既存の絵を左上に保持します。範囲外の絵が切れる場合は確認が表示されます。サンプルと文字は縦横比を保って中央に配置します。</p>
+          <p>長さは見た目の文字数ではなく、JavaScriptの<code>String.length</code>で数えます。文字アニメーションの入力はUnicode文字単位で扱います。</p>
+        </div>
       </div>
-    </section>
-
-    <section class="encoder-grid">
-      <article class="panel encoder-card">
-        <h2>Safe mode <span class="mode-tag">15bit × 69 code units</span></h2>
-        <p>1024bitを連続する15bit値へ分割します。最後のグループは4bitで、残り11bitは0です。各値は <code>codeUnit = value + OFFSET</code> で1 code unitに変換します。</p>
-        <label for="safeOutput">出力文字列（UTF-16 code units）</label>
-        <textarea id="safeOutput" spellcheck="false" aria-label="Safe mode output"></textarea>
-        <div class="stats">
-          <div class="stat"><strong id="safeLength">0</strong>総出力長（UTF-16 code units / 区切り含む）</div>
-          <div class="stat"><strong id="safeFrameCount">1</strong>フレーム数</div>
-          <div class="stat"><strong>69 / frame</strong>各フレームのcode units</div>
-          <div class="stat"><strong>0x3000</strong>OFFSET</div>
-        </div>
-        <div class="safe-note"><code>U+3000–U+AFFF</code> の連続BMP範囲のみ使用。surrogate（D800–DFFF）、C0/C1制御文字、NULL、CR/LF、U+2028/U+2029は範囲外です。</div>
-        <div class="button-row" style="margin-top: 10px">
-          <button id="safeEncodeButton" class="primary" type="button">Safeをエンコード</button>
-          <button id="safeDecodeButton" type="button">Safeをデコードして表示</button>
-          <button id="safeCopyButton" class="subtle" type="button">コピー</button>
-        </div>
-        <div class="list-label">各code unit（値 / Unicode code point表記）</div>
-        <div id="safeList" class="safe-list"><div class="empty-list">Safeをエンコードすると表示されます。</div></div>
-        <div id="safeVerification" class="verification stale">自動検証: 未実行</div>
-      </article>
-    </section>
-
-    <p class="footer-note">Safe modeの復号概念: <code>decodedValue = ToUTF16(character) - 0x3000</code>。各15bit値を下位bitから順にrow-majorへ戻します。Safe出力は常に1文字=1 UTF-16 code unitです。</p>
+    </details>
+    <footer class="page-footer"><span class="footer-brand">LCD32 Encoder <span aria-hidden="true">·</span> Resonite用</span><span>画像の処理は、このブラウザ内で完結します。</span></footer>
   </main>
 
+  <dialog id="resizeDialog" class="resize-dialog" aria-labelledby="resizeTitle" aria-describedby="resizeWarning">
+    <form method="dialog">
+      <h2 id="resizeTitle">左上32×32だけを残しますか？</h2>
+      <p id="resizeWarning">全フレームの右半分・下半分にあるドットが削除されます。この操作は元に戻せません。</p>
+      <div class="dialog-actions"><button value="cancel" type="submit" autofocus>キャンセル</button><button id="resizeConfirm" value="crop" class="danger" type="submit">左上を残してサイズ変更</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="colorModeDialog" class="resize-dialog" aria-labelledby="colorModeTitle">
+    <form method="dialog"><h2 id="colorModeTitle">1bitに変換しますか？</h2><p>全フレームを明度50%で0 / 1に変換します。中間の明度と色は失われます。</p><div class="dialog-actions"><button value="cancel" type="submit" autofocus>キャンセル</button><button value="convert" class="danger" type="submit">1bitに変換</button></div></form>
+  </dialog>
+
+  <script id="lcd-codec">
+    // The original 1bit Safe format remains byte-for-byte compatible.
+    const LCDCodec = (() => {
+      "use strict";
+      const PANEL_SIZE = 32;
+      const PANEL_PIXEL_COUNT = PANEL_SIZE * PANEL_SIZE;
+      const SAFE_BITS = 15;
+      const SAFE_CHUNK_COUNT = Math.ceil(PANEL_PIXEL_COUNT / SAFE_BITS);
+      const SAFE_OFFSET = 0x3000;
+      const SAFE_MAX_CODE_UNIT = SAFE_OFFSET + 0x7fff;
+      const MAX_PANEL_AXIS = 8;
+      const MAX_PANELS = 16;
+
+      function dimensions(size) {
+        const width = typeof size === "number" ? size : size?.width;
+        const height = typeof size === "number" ? size : size?.height;
+        if (![width, height].every(value => Number.isInteger(value) && value >= PANEL_SIZE && value <= PANEL_SIZE * MAX_PANEL_AXIS && value % PANEL_SIZE === 0) || width * height > PANEL_PIXEL_COUNT * MAX_PANELS) throw new Error("横・縦は各1〜8枚（32の倍数）、合計16枚まで指定できます。");
+        return { width, height };
+      }
+
+      function layoutsForPanelCount(count) {
+        if (!Number.isInteger(count) || count < 1 || count > MAX_PANELS) return [];
+        const layouts = [];
+        for (let columns = 1; columns <= MAX_PANEL_AXIS; columns += 1) {
+          const rows = count / columns;
+          if (Number.isInteger(rows) && rows >= 1 && rows <= MAX_PANEL_AXIS) layouts.push({ width: columns * PANEL_SIZE, height: rows * PANEL_SIZE });
+        }
+        return layouts;
+      }
+
+      function panelCount(size) {
+        const { width, height } = dimensions(size);
+        return width * height / PANEL_PIXEL_COUNT;
+      }
+
+      function chunkCount(bits = 1) {
+        if (bits !== 1 && bits !== 5) throw new Error("1ドットのデータ長は1bitまたは5bitです。");
+        return Math.ceil(PANEL_PIXEL_COUNT / (SAFE_BITS / bits));
+      }
+
+      function bitsFromLength(length) {
+        if (length === SAFE_CHUNK_COUNT) return 1;
+        if (length === chunkCount(5)) return 5;
+        throw new Error(`1パネルは69（1bit）または342（5bit）UTF-16単位必要です（入力は${length}）。`);
+      }
+
+      function validatePixels(bitmap, bits) {
+        const maximum = (1 << bits) - 1;
+        if (Array.from(bitmap).some(value => !Number.isInteger(value) || value < 0 || value > maximum)) throw new Error(`ドットの値は0〜${maximum}の整数で指定してください。`);
+      }
+
+      function safePixelsToString(bitmap, bits = 1) {
+        const chunks = chunkCount(bits), perChunk = SAFE_BITS / bits;
+        if (bitmap.length !== PANEL_PIXEL_COUNT) throw new Error("1パネルは1024ドット必要です。");
+        validatePixels(bitmap, bits);
+        const chars = [];
+        for (let chunk = 0; chunk < chunks; chunk += 1) {
+          const start = chunk * perChunk;
+          const remaining = Math.min(perChunk, PANEL_PIXEL_COUNT - start);
+          let value = 0;
+          for (let pixel = 0; pixel < remaining; pixel += 1) value |= bitmap[start + pixel] << (pixel * bits);
+          chars.push(String.fromCharCode(SAFE_OFFSET + value));
+        }
+        return chars.join("");
+      }
+
+      function safeStringToPixels(value, bits = bitsFromLength(value.length)) {
+        const chunks = chunkCount(bits), perChunk = SAFE_BITS / bits, pixelMask = (1 << bits) - 1;
+        if (value.length !== chunks) throw new Error(`1パネルは${chunks} UTF-16単位必要です（入力は${value.length}）。`);
+        const bitmap = new Uint8Array(PANEL_PIXEL_COUNT);
+        for (let chunk = 0; chunk < chunks; chunk += 1) {
+          const codeUnit = value.charCodeAt(chunk);
+          if (codeUnit < SAFE_OFFSET || codeUnit > SAFE_MAX_CODE_UNIT) throw new Error(`${chunk}番目の文字がSafe範囲 U+3000–U+AFFF 外です。`);
+          const start = chunk * perChunk;
+          const remaining = Math.min(perChunk, PANEL_PIXEL_COUNT - start);
+          const value15 = codeUnit - SAFE_OFFSET;
+          const validMask = (1 << (remaining * bits)) - 1;
+          if ((value15 & ~validMask) !== 0) throw new Error(`最後のSafeグループの未使用${SAFE_BITS - remaining * bits}bitが0ではありません。`);
+          for (let pixel = 0; pixel < remaining; pixel += 1) bitmap[start + pixel] = (value15 >> (pixel * bits)) & pixelMask;
+        }
+        return bitmap;
+      }
+
+      function splitPanels(bitmap, size) {
+        const count = panelCount(size);
+        const { width, height } = dimensions(size);
+        if (bitmap.length !== width * height) throw new Error("キャンバスのサイズとドット数が一致しません。");
+        const columns = width / PANEL_SIZE;
+        return Array.from({ length: count }, (_, panel) => {
+          const tile = new Uint8Array(PANEL_PIXEL_COUNT);
+          const left = (panel % columns) * PANEL_SIZE;
+          const top = Math.floor(panel / columns) * PANEL_SIZE;
+          for (let y = 0; y < PANEL_SIZE; y += 1) {
+            for (let x = 0; x < PANEL_SIZE; x += 1) tile[y * PANEL_SIZE + x] = bitmap[(top + y) * width + left + x];
+          }
+          return tile;
+        });
+      }
+
+      function joinPanels(panels, size) {
+        if (panels.length !== panelCount(size) || panels.some((panel) => panel.length !== PANEL_PIXEL_COUNT)) throw new Error("パネルの数またはサイズが一致しません。");
+        const { width, height } = dimensions(size);
+        const bitmap = new Uint8Array(width * height);
+        const columns = width / PANEL_SIZE;
+        panels.forEach((tile, panel) => {
+          const left = (panel % columns) * PANEL_SIZE;
+          const top = Math.floor(panel / columns) * PANEL_SIZE;
+          for (let y = 0; y < PANEL_SIZE; y += 1) {
+            for (let x = 0; x < PANEL_SIZE; x += 1) bitmap[(top + y) * width + left + x] = tile[y * PANEL_SIZE + x];
+          }
+        });
+        return bitmap;
+      }
+
+      function encodeFrames(frames, size, bits = 1) {
+        panelCount(size);
+        chunkCount(bits);
+        if (!frames.length) throw new Error("フレームがありません。");
+        return frames.map((frame) => {
+          validatePixels(frame, bits);
+          return splitPanels(frame, size).map(panel => safePixelsToString(panel, bits)).join("|");
+        }).join("/");
+      }
+
+      function parseFrameStrings(value) {
+        if (!value.length) throw new Error("Safe出力が空です。");
+        let count, bits;
+        return value.split("/").map((frame, frameIndex) => {
+          let panelStrings = frame.split("|");
+          // Keep previously generated 64×64 strings readable; new output always uses |.
+          if (!frame.includes("|") && frame.length === SAFE_CHUNK_COUNT * 4) {
+            panelStrings = Array.from({ length: 4 }, (_, panel) => frame.slice(panel * SAFE_CHUNK_COUNT, (panel + 1) * SAFE_CHUNK_COUNT));
+          }
+          if (!layoutsForPanelCount(panelStrings.length).length) throw new Error(`${frameIndex + 1}フレーム目: ${panelStrings.length}枚を配置できません。横・縦は各8枚、合計16枚までです。パネル間の「|」を確認してください。`);
+          if (count !== undefined && panelStrings.length !== count) throw new Error(`${frameIndex + 1}フレーム目: フレーム間でパネル数が異なります。`);
+          count = panelStrings.length;
+          panelStrings.forEach((panelString, panel) => {
+            try {
+              const panelBits = bitsFromLength(panelString.length);
+              if (bits !== undefined && panelBits !== bits) throw new Error("1bitと5bitのパネル・フレームは混在できません。");
+              bits = panelBits;
+            } catch (error) {
+              throw new Error(`${frameIndex + 1}フレーム目・パネル${panel + 1}: ${error.message}`);
+            }
+          });
+          return panelStrings;
+        });
+      }
+
+      function detectFormat(value) {
+        const parsed = parseFrameStrings(value);
+        const count = parsed[0].length;
+        const legacy = count === 4 && !value.includes("|");
+        const layouts = legacy ? [dimensions(64)] : layoutsForPanelCount(count);
+        const bits = bitsFromLength(parsed[0][0].length);
+        return { panelCount: count, frameCount: parsed.length, bits, chunkCount: chunkCount(bits), layouts, size: layouts.length === 1 ? layouts[0] : null };
+      }
+
+      function decodeFrames(value, size, bits) {
+        const count = panelCount(size);
+        if (bits !== undefined) chunkCount(bits);
+        const { width, height } = dimensions(size);
+        return parseFrameStrings(value).map((panelStrings, frameIndex) => {
+          if (panelStrings.length !== count) throw new Error(`${frameIndex + 1}フレーム目: ${width}×${height}は${count}枚のパネルが必要です（入力は${panelStrings.length}枚）。`);
+          const panels = panelStrings.map((panelString, panel) => {
+            try {
+              return safeStringToPixels(panelString, bits);
+            } catch (error) {
+              throw new Error(`${frameIndex + 1}フレーム目・パネル${panel + 1}: ${error.message}`);
+            }
+          });
+          return joinPanels(panels, size);
+        });
+      }
+
+      function resizeBitmap(bitmap, fromSize, toSize) {
+        const from = dimensions(fromSize), to = dimensions(toSize);
+        if (bitmap.length !== from.width * from.height) throw new Error("変更前のサイズが一致しません。");
+        const next = new Uint8Array(to.width * to.height);
+        for (let y = 0; y < Math.min(from.height, to.height); y += 1) {
+          for (let x = 0; x < Math.min(from.width, to.width); x += 1) next[y * to.width + x] = bitmap[y * from.width + x];
+        }
+        return next;
+      }
+
+      function scaleBitmap(bitmap, fromSize, toSize) {
+        const from = dimensions(fromSize), to = dimensions(toSize);
+        const scaled = new Uint8Array(to.width * to.height);
+        for (let y = 0; y < to.height; y += 1) {
+          for (let x = 0; x < to.width; x += 1) scaled[y * to.width + x] = bitmap[Math.floor(y * from.height / to.height) * from.width + Math.floor(x * from.width / to.width)];
+        }
+        return scaled;
+      }
+
+      return Object.freeze({ PANEL_SIZE, PANEL_PIXEL_COUNT, SAFE_BITS, SAFE_CHUNK_COUNT, SAFE_OFFSET, SAFE_MAX_CODE_UNIT, MAX_PANEL_AXIS, MAX_PANELS, dimensions, panelCount, layoutsForPanelCount, chunkCount, safePixelsToString, safeStringToPixels, splitPanels, joinPanels, encodeFrames, decodeFrames, detectFormat, resizeBitmap, scaleBitmap });
+    })();
+  </script>
+  <script id="lcd-colors">
+    const LCDColors = (() => {
+      "use strict";
+      const luminance = (r, g, b) => .2126 * r + .7152 * g + .0722 * b;
+      // RGB221: bits 4..3 = R, 2..1 = G, 0 = B. Byte values for CSS/canvas.
+      function rgb(value, mode) {
+        if (mode === "rgb32") return [(value >> 3) * 85, ((value >> 1) & 3) * 85, (value & 1) * 255];
+        const level = mode === "mono" ? value * 255 : Math.round(value * 255 / 31);
+        return [level, level, level];
+      }
+      function fromRGBA(r, g, b, a, mode) {
+        const opacity = a / 255;
+        r *= opacity; g *= opacity; b *= opacity; // Transparent pixels composite onto black (value 0).
+        if (mode === "rgb32") return (Math.round(r / 85) << 3) | (Math.round(g / 85) << 1) | Math.round(b / 255);
+        return mode === "mono" ? Number(luminance(r, g, b) >= 127.5) : Math.round(luminance(r, g, b) * 31 / 255);
+      }
+      function toMono(value, mode) { return fromRGBA(...rgb(value, mode), 255, "mono"); }
+      return Object.freeze({ rgb, fromRGBA, toMono });
+    })();
+  </script>
+  <script id="lcd-text-effects">
+    const LCDTextEffects = (() => {
+      "use strict";
+      const MAX_FRAMES = 240;
+      const EFFECTS = ["static", "scroll-left", "scroll-right", "scroll-up", "scroll-down", "typewriter", "blink", "explode", "assemble", "morph", "morph-letters"];
+      function noise(index, seed = 1) {
+        let value = (Math.imul(index + 1, 374761393) + Math.imul(seed + 1, 668265263)) | 0;
+        value = Math.imul(value ^ (value >>> 13), 1274126177);
+        return ((value ^ (value >>> 16)) >>> 0) / 4294967295;
+      }
+      function place(page, width, height, left, top, bitmap = page.bitmap) {
+        const result = new Uint8Array(width * height);
+        for (let y = Math.max(0, -top); y < Math.min(page.height, height - top); y += 1) {
+          for (let x = Math.max(0, -left); x < Math.min(page.width, width - left); x += 1) {
+            result[(top + y) * width + left + x] = bitmap[y * page.width + x];
+          }
+        }
+        return result;
+      }
+      function centered(page, width, height, bitmap = page.bitmap) {
+        return place(page, width, height, Math.floor((width - page.width) / 2), Math.floor((height - page.height) / 2), bitmap);
+      }
+      function scatter(bitmap, width, height, progress) {
+        if (progress === 0) return Uint8Array.from(bitmap);
+        const result = new Uint8Array(width * height);
+        if (progress >= 1) return result;
+        const extent = Math.max(width, height);
+        bitmap.forEach((on, index) => {
+          if (!on || progress > .65 + noise(index, 4) * .35) return;
+          const x = index % width, y = Math.floor(index / width);
+          const angle = Math.atan2(y - (height - 1) / 2, x - (width - 1) / 2) + (noise(index, 2) - .5) * .5;
+          const distance = progress * progress * extent * (1 + noise(index, 3));
+          const nextX = Math.round(x + Math.cos(angle) * distance), nextY = Math.round(y + Math.sin(angle) * distance);
+          if (nextX >= 0 && nextX < width && nextY >= 0 && nextY < height) result[nextY * width + nextX] = on;
+        });
+        return result;
+      }
+      function build(pages, { width, height, effect, steps = 12, hold = 4, scrollStep = 2, typingDelay = 2 }) {
+        if (!EFFECTS.includes(effect) || !pages.length) throw new Error("文字と動きを指定してください。");
+        const frames = [];
+        const blank = () => new Uint8Array(width * height);
+        const append = (bitmap, count = 1) => {
+          if (frames.length + count > MAX_FRAMES) throw new Error(`生成は最大${MAX_FRAMES}フレームです。文字数・停止時間を減らすか、スクロールの移動量を増やしてください。`);
+          for (let i = 0; i < count; i += 1) frames.push(Uint8Array.from(bitmap));
+        };
+        if (effect === "static") return [centered(pages[0], width, height)];
+        if (effect.startsWith("scroll-")) {
+          const page = pages[0];
+          const horizontal = effect === "scroll-left" || effect === "scroll-right";
+          const forward = effect === "scroll-left" || effect === "scroll-up";
+          const viewportExtent = horizontal ? width : height;
+          const textExtent = horizontal ? page.width : page.height;
+          const distance = viewportExtent + textExtent;
+          const total = Math.ceil(distance / scrollStep);
+          if (total + 1 > MAX_FRAMES) throw new Error(`スクロールが${total + 1}フレームになります。最大${MAX_FRAMES}に収まるよう移動量を増やすか、文字を小さくしてください。`);
+          for (let step = 0; step <= total; step += 1) {
+            const offset = Math.min(distance, step * scrollStep);
+            const position = forward ? viewportExtent - offset : -textExtent + offset;
+            append(place(page, width, height, horizontal ? position : Math.floor((width - page.width) / 2), horizontal ? Math.floor((height - page.height) / 2) : position));
+          }
+          return frames;
+        }
+        if (effect === "typewriter") {
+          append(blank());
+          const page = pages[0];
+          for (const partial of page.reveals) append(centered(page, width, height, partial), typingDelay);
+          append(centered(page, width, height), hold);
+          return frames;
+        }
+        if (effect === "blink") {
+          const target = centered(pages[0], width, height);
+          for (let repeat = 0; repeat < 3; repeat += 1) {
+            append(target, Math.max(1, hold));
+            append(blank(), Math.max(1, hold));
+          }
+          return frames;
+        }
+        if (effect === "explode" || effect === "assemble") {
+          const target = centered(pages[0], width, height);
+          if (effect === "explode") append(target, hold);
+          for (let step = 0; step <= steps; step += 1) append(scatter(target, width, height, effect === "explode" ? step / steps : 1 - step / steps));
+          append(effect === "explode" ? blank() : target, hold);
+          return frames;
+        }
+        let previous = blank();
+        append(previous);
+        pages.forEach((page, pageIndex) => {
+          const target = centered(page, width, height);
+          for (let step = 1; step <= steps; step += 1) {
+            if (step === steps) { append(target); continue; }
+            const progress = step / steps, amplitude = Math.round(2 * (1 - progress));
+            const frame = blank();
+            for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
+              const index = y * width + x;
+              const sx = x + Math.round(Math.sin((y + pageIndex + 1) * .55 + progress * Math.PI * 1.5) * amplitude);
+              const sy = y + Math.round(Math.cos((x + pageIndex + 1) * .42 - progress * Math.PI) * amplitude / 2);
+              const transformed = sx >= 0 && sx < width && sy >= 0 && sy < height ? target[sy * width + sx] : 0;
+              frame[index] = noise(index, pageIndex + 1) < progress ? transformed : previous[index];
+            }
+            append(frame);
+          }
+          append(target, hold);
+          previous = target;
+        });
+        return frames;
+      }
+      return Object.freeze({ build, centered, MAX_FRAMES });
+    })();
+  </script>
   <script>
     (() => {
       "use strict";
 
-      const SIZE = 32;
-      const PIXEL_COUNT = SIZE * SIZE;
-      const SAFE_BITS = 15;
-      const SAFE_CHUNK_COUNT = Math.ceil(PIXEL_COUNT / SAFE_BITS);
-      const SAFE_OFFSET = 0x3000;
-      const SAFE_MAX_CODE_UNIT = SAFE_OFFSET + 0x7fff;
+      const { PANEL_SIZE, PANEL_PIXEL_COUNT, SAFE_CHUNK_COUNT, SAFE_OFFSET, resizeBitmap, scaleBitmap } = LCDCodec;
+      let WIDTH = 32, HEIGHT = 32;
+      let PIXEL_COUNT = WIDTH * HEIGHT;
+      const canvasSize = () => ({ width: WIDTH, height: HEIGHT });
+      const sizeKey = (size) => `${size.width}x${size.height}`;
+      const sizeLabel = (size) => `${size.width}×${size.height}`;
+      function sizeFromKey(key) {
+        const [width, height] = key.split("x").map(Number);
+        return LCDCodec.dimensions({ width, height });
+      }
+      const palette = getComputedStyle(document.documentElement);
+      const LCD_OFF = palette.getPropertyValue("--off").trim();
+      const LCD_ON = palette.getPropertyValue("--on").trim();
 
+      let pixelMode = "mono", brushValue = 31;
+      let decodedMode = "mono", safeListChunks = SAFE_CHUNK_COUNT;
+      const bitDepth = () => pixelMode === "mono" ? 1 : 5;
+      const inkValue = () => pixelMode === "mono" ? 1 : brushValue;
+      const modeLabel = mode => ({ mono: "1bit", gray32: "5bit 明度", rgb32: "5bit カラー" })[mode];
+      function pixelColor(value, mode = pixelMode) {
+        return mode === "mono" ? (value ? LCD_ON : LCD_OFF) : `rgb(${LCDColors.rgb(value, mode).join(",")})`;
+      }
       let frames = [new Uint8Array(PIXEL_COUNT)];
       let currentFrame = 0;
       let pixels = frames[currentFrame];
       let decodedFrames = [];
+      let decodedSize = canvasSize();
+      let safeListFrames = [];
       let isPlaying = false;
       let playTimer = null;
       let isPainting = false;
       let paintValue = 1;
+      let lastPaintIndex = null;
       let suppressNextClick = false;
+      let pendingCanvasSize = null;
 
       const $ = (id) => document.getElementById(id);
       const dotGrid = $("dotGrid");
@@ -614,42 +836,213 @@
         return "U+" + value.toString(16).toUpperCase().padStart(4, "0");
       }
 
-      function renderGrid() {
-        const fragment = document.createDocumentFragment();
-        for (let index = 0; index < PIXEL_COUNT; index += 1) {
-          const cell = document.createElement("button");
-          const x = index % SIZE;
-          const y = Math.floor(index / SIZE);
-          cell.type = "button";
-          cell.className = "pixel";
-          cell.dataset.index = String(index);
-          cell.setAttribute("role", "gridcell");
-          cell.setAttribute("aria-label", `X=${x}, Y=${y}`);
-          cell.setAttribute("aria-pressed", "false");
-          cell.tabIndex = -1;
-          fragment.appendChild(cell);
+      function updateBrush() {
+        $("brushValue").value = String(brushValue);
+        const channels = LCDColors.rgb(brushValue, pixelMode);
+        $("brushDescription").textContent = pixelMode === "rgb32" ? `RGB ${channels.join(" / ")}` : `${Math.round(brushValue * 100 / 31)}% の明度`;
+        Array.from($("colorPalette").children).forEach((chip, index) => chip.setAttribute("aria-pressed", String(index === brushValue)));
+      }
+
+      function updateColorControls() {
+        const multi = bitDepth() === 5;
+        $("pixelMode").value = pixelMode;
+        $("previewMode").textContent = modeLabel(pixelMode);
+        $("brushControls").hidden = !multi;
+        $("binarizeField").hidden = multi;
+        $("thresholdField").hidden = multi;
+        $("imageColorHint").hidden = !multi;
+        $("imageColorHint").textContent = pixelMode === "gray32" ? "画像の明るさを0〜31へ変換します。透明部分は黒に合成します。" : "画像を固定32色に減色します。透明部分は黒に合成します。";
+        $("colorModeHint").textContent = !multi ? "1ドットは0 / 1。従来の69単位 / パネルです。" : `${pixelMode === "gray32" ? "0＝黒、31＝白。" : "R:2bit・G:2bit・B:1bitの固定32色。"}342単位 / パネル。明度とカラーの切替は値を保持します。`;
+        $("gridHint").textContent = multi ? "選んだ値で描画 · Shiftで消去" : "クリック・ドラッグで描画";
+        $("pixelLegend").hidden = multi;
+        $("fillButton").title = multi ? "現在のフレームを選んだ値で塗る" : "現在のフレームをすべてONにする";
+        $("invertButton").title = multi ? "現在のフレームの値を31−値に反転する" : "現在のフレームのONとOFFを入れ替える";
+        dotGrid.classList.toggle("multilevel", multi);
+        $("colorPalette").replaceChildren();
+        if (multi) for (let value = 0; value < 32; value += 1) {
+          const chip = document.createElement("button");
+          chip.type = "button"; chip.className = "color-chip"; chip.dataset.value = String(value);
+          chip.style.setProperty("--chip", pixelColor(value));
+          chip.setAttribute("aria-label", `値 ${value}（RGB ${LCDColors.rgb(value, pixelMode).join(", ")}）`);
+          chip.title = chip.getAttribute("aria-label");
+          chip.addEventListener("click", () => { brushValue = value; updateBrush(); });
+          $("colorPalette").appendChild(chip);
         }
-        dotGrid.replaceChildren(fragment);
+        updateBrush();
+      }
+
+      function applyPixelMode(nextMode) {
+        stopPlayback();
+        isPainting = false; lastPaintIndex = null; suppressNextClick = false;
+        if (pixelMode === "mono" && nextMode !== "mono") frames = frames.map(frame => Uint8Array.from(frame, value => value * 31));
+        else if (nextMode === "mono") frames = frames.map(frame => Uint8Array.from(frame, value => LCDColors.toMono(value, pixelMode)));
+        pixelMode = nextMode;
+        pixels = frames[currentFrame];
+        updateColorControls(); renderGrid(); redrawEditor(); renderFrameStrip(); encodeSafe();
+        $("imageStatus").className = "status-line";
+        $("imageStatus").textContent = `${modeLabel(pixelMode)}に変更しました。全${frames.length}フレームに適用しています。`;
+      }
+
+      function syncLayoutControls() {
+        const key = sizeKey(canvasSize());
+        const select = $("canvasSize"), custom = $("customSizeOption");
+        const preset = Array.from(select.options).some(option => option !== custom && option.value === key);
+        custom.hidden = preset;
+        if (!preset) {
+          custom.value = key;
+          custom.textContent = `${sizeLabel(canvasSize())}（${WIDTH / PANEL_SIZE}×${HEIGHT / PANEL_SIZE}枚）`;
+        }
+        select.value = key;
+        $("panelColumns").value = String(WIDTH / PANEL_SIZE);
+        $("panelRows").value = String(HEIGHT / PANEL_SIZE);
+        updateLayoutPreview();
+      }
+
+      function readLayoutSize() {
+        return LCDCodec.dimensions({ width: Number($("panelColumns").value) * PANEL_SIZE, height: Number($("panelRows").value) * PANEL_SIZE });
+      }
+
+      function updateLayoutPreview() {
+        try {
+          const size = readLayoutSize();
+          $("layoutMessage").className = "field-note";
+          $("layoutMessage").textContent = `${sizeLabel(size)}・${LCDCodec.panelCount(size)}枚`;
+          $("applyLayoutButton").disabled = false;
+        } catch (error) {
+          $("layoutMessage").className = "field-note error";
+          $("layoutMessage").textContent = error.message;
+          $("applyLayoutButton").disabled = true;
+        }
+      }
+
+      function updateCanvasSizeUI() {
+        syncLayoutControls();
+        $("importSize").textContent = sizeLabel(canvasSize());
+        dotGrid.style.setProperty("--grid-width", String(WIDTH));
+        dotGrid.style.setProperty("--grid-height", String(HEIGHT));
+        dotGrid.style.setProperty("--panel-columns", String(WIDTH / PANEL_SIZE));
+        dotGrid.style.setProperty("--panel-rows", String(HEIGHT / PANEL_SIZE));
+        dotGrid.style.setProperty("--pixel-gap", Math.max(WIDTH, HEIGHT) > 128 ? "0px" : "1px");
+        document.querySelector(".grid-wrap").style.setProperty("--canvas-width-factor", String(WIDTH / Math.max(WIDTH, HEIGHT)));
+        dotGrid.setAttribute("aria-label", `${sizeLabel(canvasSize())}の編集用ドットグリッド`);
+        const positions = [0, WIDTH / 4, WIDTH / 2, WIDTH * 3 / 4, WIDTH - 1];
+        Array.from($("gridRuler").children).forEach((span, index) => { span.textContent = String(positions[index]); });
+      }
+
+      function updateOutputFormat(size, bits = bitDepth()) {
+        const count = LCDCodec.panelCount(size);
+        $("frameUnits").textContent = `${LCDCodec.chunkCount(bits) * count + count - 1}単位 / フレーム`;
+        $("panelLayout").hidden = count === 1;
+        $("panelSummary").textContent = `${sizeLabel(size)}・${count}枚を1本に（各${LCDCodec.chunkCount(bits)}単位・${bits}bit）`;
+        const columns = size.width / PANEL_SIZE;
+        const map = $("panelMap");
+        map.style.gridTemplateColumns = `repeat(${size.width / PANEL_SIZE}, 1fr)`;
+        map.replaceChildren();
+        if (count > 1) Array.from({ length: count }, (_, index) => {
+          const item = document.createElement("li"), position = document.createElement("small");
+          item.textContent = String.fromCharCode(0x2460 + index);
+          item.title = `${Math.floor(index / columns) + 1}行${index % columns + 1}列・分割後 [${index}]`;
+          item.setAttribute("aria-label", `パネル${index + 1}・${item.title}`);
+          position.textContent = `[${index}]`;
+          if (columns <= 4) item.appendChild(position);
+          map.appendChild(item);
+        });
+      }
+
+      function changeCanvasSize() {
+        if ($("canvasSize").value === "custom") {
+          syncLayoutControls();
+          $("layoutDetails").open = true;
+          $("panelColumns").focus();
+          return;
+        }
+        requestCanvasSize(sizeFromKey($("canvasSize").value));
+      }
+
+      function requestCanvasSize(nextSize) {
+        if (sizeKey(nextSize) === sizeKey(canvasSize())) return;
+        const wouldCrop = frames.some((frame) => frame.some((value, index) => value && (index % WIDTH >= nextSize.width || Math.floor(index / WIDTH) >= nextSize.height)));
+        if (wouldCrop) {
+          syncLayoutControls();
+          pendingCanvasSize = nextSize;
+          $("resizeTitle").textContent = `${sizeLabel(nextSize)}の範囲だけを残しますか？`;
+          $("resizeWarning").textContent = `全フレームで、左上を基準に${sizeLabel(nextSize)}の範囲外にあるドットが削除されます。この操作は元に戻せません。`;
+          $("resizeConfirm").textContent = `左上を残して${sizeLabel(nextSize)}に変更`;
+          $("resizeDialog").returnValue = "cancel";
+          $("resizeDialog").showModal();
+          return;
+        }
+        applyCanvasSize(nextSize);
+      }
+
+      function applyCanvasSize(nextSize) {
+        stopPlayback();
+        isPainting = false;
+        lastPaintIndex = null;
+        suppressNextClick = false;
+        frames = frames.map((frame) => resizeBitmap(frame, canvasSize(), nextSize));
+        WIDTH = nextSize.width;
+        HEIGHT = nextSize.height;
+        PIXEL_COUNT = WIDTH * HEIGHT;
+        pixels = frames[currentFrame];
+        decodedFrames = [];
+        updateCanvasSizeUI();
+        renderGrid();
+        redrawEditor();
+        renderFrameStrip();
+        encodeSafe();
+        $("imageStatus").className = "status-line";
+        $("imageStatus").textContent = `${sizeLabel(canvasSize())}に変更しました。全${frames.length}フレームの絵を左上を基準に配置しています。`;
+      }
+
+      function renderGrid() {
+        if (dotGrid.children.length !== PIXEL_COUNT || dotGrid.dataset.size !== sizeKey(canvasSize())) {
+          dotGrid.dataset.size = sizeKey(canvasSize());
+          const fragment = document.createDocumentFragment();
+          for (let index = 0; index < PIXEL_COUNT; index += 1) {
+            const cell = document.createElement("button");
+            const x = index % WIDTH;
+            const y = Math.floor(index / WIDTH);
+            cell.type = "button";
+            cell.className = "pixel";
+            cell.dataset.index = String(index);
+            cell.setAttribute("role", "gridcell");
+            cell.setAttribute("aria-label", `X=${x}, Y=${y}`);
+            cell.setAttribute("aria-pressed", "false");
+            cell.tabIndex = index === 0 ? 0 : -1;
+            fragment.appendChild(cell);
+          }
+          dotGrid.replaceChildren(fragment);
+        }
         for (let index = 0; index < PIXEL_COUNT; index += 1) updateCell(index);
       }
 
       function updateCell(index) {
         const cell = dotGrid.children[index];
         if (!cell) return;
-        const on = pixels[index] === 1;
+        const on = pixels[index] !== 0;
+        cell.dataset.value = String(pixels[index]);
+        cell.style.setProperty("--pixel-color", pixelColor(pixels[index]));
+        cell.setAttribute("aria-description", `値 ${pixels[index]}`);
         cell.classList.toggle("on", on);
         cell.setAttribute("aria-pressed", String(on));
       }
 
-      function drawBitmap(canvasContext, bitmap) {
-        canvasContext.clearRect(0, 0, SIZE, SIZE);
-        canvasContext.fillStyle = "#d8e1dd";
-        canvasContext.fillRect(0, 0, SIZE, SIZE);
-        canvasContext.fillStyle = "#15231d";
-        for (let index = 0; index < PIXEL_COUNT; index += 1) {
+      function drawBitmap(canvasContext, bitmap, size = canvasSize(), mode = pixelMode) {
+        const { width, height } = size;
+        if (canvasContext.canvas.width !== width || canvasContext.canvas.height !== height) {
+          canvasContext.canvas.width = width;
+          canvasContext.canvas.height = height;
+        }
+        canvasContext.canvas.style.setProperty("--bitmap-width-factor", String(width / Math.max(width, height)));
+        canvasContext.clearRect(0, 0, width, height);
+        canvasContext.fillStyle = pixelColor(0, mode);
+        canvasContext.fillRect(0, 0, width, height);
+        for (let index = 0; index < width * height; index += 1) {
           if (bitmap[index]) {
-            const x = index % SIZE;
-            const y = Math.floor(index / SIZE);
+            canvasContext.fillStyle = pixelColor(bitmap[index], mode);
+            const x = index % width;
+            const y = Math.floor(index / width);
             canvasContext.fillRect(x, y, 1, 1);
           }
         }
@@ -660,9 +1053,10 @@
       }
 
       function updateFramePosition() {
-        $("framePosition").textContent = `Frame ${currentFrame + 1} / ${frames.length}`;
+        $("framePosition").textContent = `${currentFrame + 1} / ${frames.length}`;
         $("previousFrameButton").disabled = currentFrame === 0;
         $("nextFrameButton").disabled = currentFrame === frames.length - 1;
+        $("deleteFrameButton").disabled = frames.length === 1;
       }
 
       function renderFrameStrip() {
@@ -674,12 +1068,12 @@
           button.type = "button";
           button.className = `frame-item${index === currentFrame ? " active" : ""}`;
           button.dataset.frameIndex = String(index);
-          button.setAttribute("role", "listitem");
-          button.setAttribute("aria-label", `Frame ${index + 1}`);
-          canvas.width = SIZE;
-          canvas.height = SIZE;
+          button.setAttribute("aria-label", `フレーム ${index + 1}`);
+          button.setAttribute("aria-pressed", String(index === currentFrame));
+          canvas.width = WIDTH;
+          canvas.height = HEIGHT;
           canvas.dataset.frameIndex = String(index);
-          label.textContent = `Frame ${index + 1}`;
+          label.textContent = String(index + 1).padStart(2, "0");
           button.append(canvas, label);
           frameStrip.appendChild(button);
           drawBitmap(canvas.getContext("2d"), frame);
@@ -695,8 +1089,9 @@
       function renderDecodedFrame() {
         if (!decodedFrames.length) return;
         const index = Math.min(currentFrame, decodedFrames.length - 1);
-        drawBitmap(decodedContext, decodedFrames[index]);
-        $("decodedLabel").textContent = `Safeのデコード結果（Frame ${index + 1} / ${decodedFrames.length}）`;
+        drawBitmap(decodedContext, decodedFrames[index], decodedSize, decodedMode);
+        $("decodedLabel").textContent = `${sizeLabel(decodedSize)} ${modeLabel(decodedMode)}（${index + 1} / ${decodedFrames.length}）`;
+        renderSafeListFrame();
       }
 
       function switchFrame(index) {
@@ -710,7 +1105,7 @@
       }
 
       function setPixel(index, value) {
-        const next = value ? 1 : 0;
+        const next = value;
         if (pixels[index] === next) return;
         pixels[index] = next;
         updateCell(index);
@@ -727,64 +1122,26 @@
         redrawEditor();
         renderFrameStrip();
         markOutputsStale();
-        if (sourceMessage) $("imageStatus").textContent = sourceMessage;
+        if (sourceMessage) {
+          $("imageStatus").className = "status-line";
+          $("imageStatus").textContent = sourceMessage;
+        }
       }
 
       function markOutputsStale() {
         const element = $("safeVerification");
         element.className = "verification stale";
-        element.textContent = "自動検証: グリッド変更後のため、再エンコード待ち";
-      }
-
-      function safePixelsToString(bitmap) {
-        const chars = [];
-        for (let chunk = 0; chunk < SAFE_CHUNK_COUNT; chunk += 1) {
-          const start = chunk * SAFE_BITS;
-          const remaining = Math.min(SAFE_BITS, PIXEL_COUNT - start);
-          let value = 0;
-          for (let bit = 0; bit < remaining; bit += 1) {
-            if (bitmap[start + bit]) value |= (1 << bit);
-          }
-          chars.push(String.fromCharCode(SAFE_OFFSET + value));
-        }
-        return chars.join("");
+        element.textContent = "編集内容が変わりました。「エンコード」で出力を更新してください。";
+        $("safeCopyButton").disabled = true;
+        $("outputFeedback").textContent = "";
       }
 
       function safeFramesToString(frameBitmaps) {
-        return frameBitmaps.map((frame) => safePixelsToString(frame)).join("/");
-      }
-
-      function safeStringToPixels(value) {
-        if (value.length !== SAFE_CHUNK_COUNT) {
-          throw new Error(`Safeは${SAFE_CHUNK_COUNT} code units必要です（入力は${value.length}）。`);
-        }
-        const bitmap = new Uint8Array(PIXEL_COUNT);
-        for (let chunk = 0; chunk < SAFE_CHUNK_COUNT; chunk += 1) {
-          const codeUnit = value.charCodeAt(chunk);
-          if (codeUnit < SAFE_OFFSET || codeUnit > SAFE_MAX_CODE_UNIT) {
-            throw new Error(`${chunk}番目のcode unit ${codePoint(codeUnit)} はSafe範囲 U+3000–U+AFFF 外です。`);
-          }
-          const start = chunk * SAFE_BITS;
-          const remaining = Math.min(SAFE_BITS, PIXEL_COUNT - start);
-          const value15 = codeUnit - SAFE_OFFSET;
-          const validMask = remaining === SAFE_BITS ? 0x7fff : ((1 << remaining) - 1);
-          if ((value15 & ~validMask) !== 0) {
-            throw new Error(`最後のSafeグループにpadding以外のbitが入っています（${codePoint(codeUnit)}）。`);
-          }
-          for (let bit = 0; bit < remaining; bit += 1) {
-            bitmap[start + bit] = (value15 & (1 << bit)) ? 1 : 0;
-          }
-        }
-        return bitmap;
+        return LCDCodec.encodeFrames(frameBitmaps, canvasSize(), bitDepth());
       }
 
       function safeStringToFrames(value) {
-        if (!value.length) throw new Error("Safe出力が空です。");
-        const frameStrings = value.split("/");
-        if (frameStrings.some((frame) => frame.length === 0)) {
-          throw new Error("フレーム間、または先頭・末尾に空のフレームがあります。");
-        }
-        return frameStrings.map((frame) => safeStringToPixels(frame));
+        return LCDCodec.decodeFrames(value, canvasSize(), bitDepth());
       }
 
       function compareFrameSets(expectedFrames, actualFrames) {
@@ -806,35 +1163,53 @@
         };
       }
 
-      function renderDecoded(frameBitmaps) {
+      function renderDecoded(frameBitmaps, size = canvasSize(), mode = pixelMode) {
+        decodedMode = mode;
         decodedFrames = frameBitmaps;
+        decodedSize = size;
         renderDecodedFrame();
       }
 
       function showVerification(element, result) {
         element.className = `verification ${result.exact ? "ok" : "bad"}`;
         element.textContent = result.exact
-          ? `自動検証: 全フレーム一致（${result.matching} / ${result.total} pixel、${result.frameCount} frames）`
-          : `自動検証: 不一致（${result.matching} / ${result.total} pixel、${result.frameCount} frames）`;
+          ? `✓ 全${result.frameCount}フレームの復元を確認（${result.matching.toLocaleString()} / ${result.total.toLocaleString()}ドット一致）`
+          : `編集中の画像と不一致（${result.matching.toLocaleString()} / ${result.total.toLocaleString()}ドット一致）`;
       }
 
-      function renderSafeList(frameStrings) {
+      function renderSafeList(frameStrings, bits = bitDepth()) {
+        safeListChunks = LCDCodec.chunkCount(bits);
+        safeListFrames = frameStrings;
+        $("safeList").replaceChildren();
+        renderSafeListFrame();
+      }
+
+      function renderSafeListFrame() {
+        if (!$("codeDetails").open || !safeListFrames.length) return;
         const list = $("safeList");
         list.replaceChildren();
-        frameStrings.forEach((value, frameIndex) => {
-          for (let index = 0; index < value.length; index += 1) {
-            const row = document.createElement("div");
-            const codeUnit = value.charCodeAt(index);
-            row.textContent = `F${String(frameIndex + 1).padStart(2, "0")} #${String(index).padStart(2, "0")} value=${String(codeUnit - SAFE_OFFSET).padStart(5, " ")}  ${codePoint(codeUnit)}`;
-            list.appendChild(row);
-          }
-        });
+        const frameIndex = Math.min(currentFrame, safeListFrames.length - 1);
+        const heading = document.createElement("div");
+        heading.textContent = `フレーム ${frameIndex + 1} / ${safeListFrames.length}`;
+        list.appendChild(heading);
+        const data = safeListFrames[frameIndex].replaceAll("|", "");
+        for (let index = 0; index < data.length; index += 1) {
+          const row = document.createElement("div");
+          const codeUnit = data.charCodeAt(index);
+          row.textContent = `F${String(frameIndex + 1).padStart(2, "0")} P${Math.floor(index / safeListChunks) + 1} #${String(index % safeListChunks).padStart(2, "0")} value=${String(codeUnit - SAFE_OFFSET).padStart(5, " ")}  ${codePoint(codeUnit)}`;
+          list.appendChild(row);
+        }
       }
 
       function encodeSafe() {
-        const frameStrings = frames.map((frame) => safePixelsToString(frame));
         const encoded = safeFramesToString(frames);
+        const frameStrings = encoded.split("/");
         safeOutput.value = encoded;
+        updateOutputFormat(canvasSize());
+        populateDecodeLayouts(LCDCodec.detectFormat(encoded), sizeKey(canvasSize()));
+        $("decodeLayoutField").hidden = true;
+        $("decodeModeField").hidden = bitDepth() === 1;
+        if (bitDepth() === 5) $("decodeMode").value = pixelMode;
         $("safeLength").textContent = String(encoded.length);
         $("safeFrameCount").textContent = String(frames.length);
         renderSafeList(frameStrings);
@@ -842,41 +1217,106 @@
         const decoded = safeStringToFrames(encoded);
         renderDecoded(decoded);
         showVerification($("safeVerification"), compareFrameSets(frames, decoded));
+        $("safeCopyButton").disabled = false;
+        $("outputFeedback").textContent = "";
       }
 
       function decodeSafeFromInput() {
         try {
           const frameStrings = safeOutput.value.split("/");
-          const decoded = safeStringToFrames(safeOutput.value);
-          renderDecoded(decoded);
-          renderSafeList(frameStrings);
+          const format = LCDCodec.detectFormat(safeOutput.value);
+          populateDecodeLayouts(format);
+          $("decodeModeField").hidden = format.bits === 1;
+          if (!format.size && !$("decodeLayout").value) {
+            clearDecodedPreview();
+            $("safeVerification").className = "verification stale";
+            $("safeVerification").textContent = `${format.panelCount}枚のパネルを検出しました。復元する配置を選んでください。`;
+            $("panelLayout").hidden = true;
+            $("frameUnits").textContent = `${format.panelCount * (format.chunkCount + 1) - 1}単位 / フレーム`;
+            $("safeCopyButton").disabled = true;
+            $("outputFeedback").textContent = "";
+            return;
+          }
+          const size = format.size || sizeFromKey($("decodeLayout").value);
+          const decoded = LCDCodec.decodeFrames(safeOutput.value, size);
+          const mode = format.bits === 1 ? "mono" : $("decodeMode").value;
+          renderDecoded(decoded, size, mode);
+          updateOutputFormat(size, format.bits);
+          renderSafeList(frameStrings, format.bits);
           $("safeLength").textContent = String(safeOutput.value.length);
           $("safeFrameCount").textContent = String(decoded.length);
-          showVerification($("safeVerification"), compareFrameSets(frames, decoded));
-          $("imageStatus").textContent = `Safeアニメーションをデコードしました（${decoded.length} frames、${safeOutput.value.length} UTF-16 code units）。`;
+          if (sizeKey(size) === sizeKey(canvasSize()) && mode === pixelMode) {
+            showVerification($("safeVerification"), compareFrameSets(frames, decoded));
+          } else {
+            $("safeVerification").className = "verification";
+            $("safeVerification").textContent = `${sizeLabel(size)}・${modeLabel(mode)}として復元しました。編集キャンバスとサイズまたは表示方法が異なります。`;
+          }
+          $("safeCopyButton").disabled = false;
+          $("outputFeedback").textContent = `${format.bits}bit・${format.panelCount}枚 × ${decoded.length}フレームを検出・復元しました。`;
         } catch (error) {
+          clearDecodedPreview();
           $("safeVerification").className = "verification bad";
           $("safeVerification").textContent = `Safeデコードエラー: ${error.message}`;
+          $("safeCopyButton").disabled = true;
+          $("outputFeedback").textContent = "";
         }
+      }
+
+      function clearDecodedPreview() {
+        decodedFrames = [];
+        safeListFrames = [];
+        decodedContext.clearRect(0, 0, decodedPreview.width, decodedPreview.height);
+        $("decodedLabel").textContent = "復元待ち";
+        $("safeList").replaceChildren();
+      }
+
+      function updateDecodeLayoutField() {
+        try {
+          const format = LCDCodec.detectFormat(safeOutput.value);
+          populateDecodeLayouts(format);
+          $("decodeModeField").hidden = format.bits === 1;
+        } catch (_) {
+          $("decodeModeField").hidden = true;
+          $("decodeLayoutField").hidden = true;
+        }
+      }
+
+      function populateDecodeLayouts(format, preferred = $("decodeLayout").value) {
+        const select = $("decodeLayout");
+        select.replaceChildren(new Option("配置を選択", ""));
+        format.layouts.forEach(size => select.add(new Option(`${sizeLabel(size)}（横${size.width / PANEL_SIZE}×縦${size.height / PANEL_SIZE}枚）`, sizeKey(size))));
+        select.value = format.size ? sizeKey(format.size) : format.layouts.some(size => sizeKey(size) === preferred) ? preferred : "";
+        $("decodeLayoutField").hidden = format.layouts.length === 1;
       }
 
       function blankBitmap() { return new Uint8Array(PIXEL_COUNT); }
 
+      function fitSample(bitmap) {
+        const side = Math.min(WIDTH, HEIGHT);
+        const scaled = scaleBitmap(bitmap, PANEL_SIZE, side);
+        const result = blankBitmap();
+        const left = (WIDTH - side) / 2, top = (HEIGHT - side) / 2;
+        for (let y = 0; y < side; y += 1) {
+          for (let x = 0; x < side; x += 1) result[(top + y) * WIDTH + left + x] = scaled[y * side + x] ? inkValue() : 0;
+        }
+        return result;
+      }
+
       function makePattern(name) {
-        const bitmap = blankBitmap();
+        const bitmap = new Uint8Array(PANEL_PIXEL_COUNT);
         if (name === "x") {
-          for (let y = 0; y < SIZE; y += 1) {
-            for (let x = 0; x < SIZE; x += 1) {
-              if (x === y || x === SIZE - 1 - y) bitmap[y * SIZE + x] = 1;
+          for (let y = 0; y < PANEL_SIZE; y += 1) {
+            for (let x = 0; x < PANEL_SIZE; x += 1) {
+              if (x === y || x === PANEL_SIZE - 1 - y) bitmap[y * PANEL_SIZE + x] = 1;
             }
           }
         } else if (name === "vertical") {
-          for (let y = 0; y < SIZE; y += 1) bitmap[y * SIZE + 16] = 1;
+          for (let y = 0; y < PANEL_SIZE; y += 1) bitmap[y * PANEL_SIZE + 16] = 1;
         } else if (name === "horizontal") {
-          for (let x = 0; x < SIZE; x += 1) bitmap[16 * SIZE + x] = 1;
+          for (let x = 0; x < PANEL_SIZE; x += 1) bitmap[16 * PANEL_SIZE + x] = 1;
         } else if (name === "checker") {
-          for (let y = 0; y < SIZE; y += 1) {
-            for (let x = 0; x < SIZE; x += 1) bitmap[y * SIZE + x] = (x + y) % 2 === 0 ? 1 : 0;
+          for (let y = 0; y < PANEL_SIZE; y += 1) {
+            for (let x = 0; x < PANEL_SIZE; x += 1) bitmap[y * PANEL_SIZE + x] = (x + y) % 2 === 0 ? 1 : 0;
           }
         } else if (name === "smile") {
           return makeSmileBitmap(false);
@@ -885,10 +1325,10 @@
       }
 
       function makeSmileBitmap(eyesClosed) {
-        const bitmap = blankBitmap();
+        const bitmap = new Uint8Array(PANEL_PIXEL_COUNT);
         const center = 15.5;
-        for (let y = 0; y < SIZE; y += 1) {
-          for (let x = 0; x < SIZE; x += 1) {
+        for (let y = 0; y < PANEL_SIZE; y += 1) {
+          for (let x = 0; x < PANEL_SIZE; x += 1) {
             const dx = x - center;
             const dy = y - center;
             const distanceSquared = dx * dx + dy * dy;
@@ -901,7 +1341,7 @@
               : (x >= 19 && x <= 21 && y >= 11 && y <= 13);
             const mouthY = Math.round(23 - 0.12 * Math.pow(x - center, 2));
             const mouth = x >= 10 && x <= 21 && (y === mouthY || y === mouthY + 1);
-            if (faceOutline || leftEye || rightEye || mouth) bitmap[y * SIZE + x] = 1;
+            if (faceOutline || leftEye || rightEye || mouth) bitmap[y * PANEL_SIZE + x] = 1;
           }
         }
         return bitmap;
@@ -910,7 +1350,7 @@
       function applyPattern(name) {
         const labels = { x: "X", vertical: "縦線", horizontal: "横線", checker: "チェッカーボード", smile: "スマイル顔" };
         stopPlayback();
-        setPixels(makePattern(name), `テストパターン「${labels[name]}」を適用しました。`);
+        setPixels(fitSample(makePattern(name)), `テストパターン「${labels[name]}」を適用しました。`);
         encodeSafe();
       }
 
@@ -924,7 +1364,10 @@
         redrawEditor();
         renderFrameStrip();
         markOutputsStale();
-        if (sourceMessage) $("imageStatus").textContent = sourceMessage;
+        if (sourceMessage) {
+          $("imageStatus").className = "status-line";
+          $("imageStatus").textContent = sourceMessage;
+        }
         encodeSafe();
       }
 
@@ -938,7 +1381,7 @@
         redrawEditor();
         renderFrameStrip();
         encodeSafe();
-        $("imageStatus").textContent = `空のFrame ${currentFrame + 1}を追加しました。`;
+        $("imageStatus").textContent = `空のフレーム ${currentFrame + 1}を追加しました。`;
       }
 
       function duplicateFrame() {
@@ -951,7 +1394,7 @@
         redrawEditor();
         renderFrameStrip();
         encodeSafe();
-        $("imageStatus").textContent = `現在のFrameを複製しました（Frame ${currentFrame + 1}）。`;
+        $("imageStatus").textContent = `現在のフレームを複製しました（フレーム ${currentFrame + 1}）。`;
       }
 
       function deleteFrame() {
@@ -967,7 +1410,7 @@
         redrawEditor();
         renderFrameStrip();
         encodeSafe();
-        $("imageStatus").textContent = `Frameを削除しました（現在 Frame ${currentFrame + 1}）。`;
+        $("imageStatus").textContent = `フレームを削除しました（現在 フレーム ${currentFrame + 1}）。`;
       }
 
       function stopPlayback() {
@@ -1000,8 +1443,8 @@
       }
 
       function setBitmapPixel(bitmap, x, y, value = true) {
-        if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return;
-        bitmap[y * SIZE + x] = value ? 1 : 0;
+        if (x < 0 || x >= PANEL_SIZE || y < 0 || y >= PANEL_SIZE) return;
+        bitmap[y * PANEL_SIZE + x] = value ? 1 : 0;
       }
 
       function fillBitmapRect(bitmap, left, top, right, bottom, value = true) {
@@ -1076,7 +1519,7 @@
       }
 
       function makeTreasureFrame(frameIndex) {
-        const bitmap = blankBitmap();
+        const bitmap = new Uint8Array(PANEL_PIXEL_COUNT);
         const openingStep = Math.min(3, Math.floor(frameIndex / 2));
         drawTreasureChestBody(bitmap);
         drawOpenLid(bitmap, openingStep);
@@ -1102,19 +1545,19 @@
         }
         if (name === "scanner") {
           return [3, 8, 13, 18, 23, 28].map((lineY) => {
-            const frame = blankBitmap();
-            for (let x = 0; x < SIZE; x += 1) frame[lineY * SIZE + x] = 1;
+            const frame = new Uint8Array(PANEL_PIXEL_COUNT);
+            for (let x = 0; x < PANEL_SIZE; x += 1) frame[lineY * PANEL_SIZE + x] = 1;
             return frame;
           });
         }
         if (name === "ball") {
           return [8, 12, 18, 24, 18, 12].map((centerY) => {
-            const frame = blankBitmap();
-            for (let y = 0; y < SIZE; y += 1) {
-              for (let x = 0; x < SIZE; x += 1) {
+            const frame = new Uint8Array(PANEL_PIXEL_COUNT);
+            for (let y = 0; y < PANEL_SIZE; y += 1) {
+              for (let x = 0; x < PANEL_SIZE; x += 1) {
                 const dx = x - 15.5;
                 const dy = y - centerY;
-                if (dx * dx + dy * dy <= 3.6 * 3.6) frame[y * SIZE + x] = 1;
+                if (dx * dx + dy * dy <= 3.6 * 3.6) frame[y * PANEL_SIZE + x] = 1;
               }
             }
             return frame;
@@ -1122,12 +1565,12 @@
         }
         if (name === "spinner") {
           return Array.from({length: 8}, (_, frameIndex) => {
-            const frame = blankBitmap();
+            const frame = new Uint8Array(PANEL_PIXEL_COUNT);
             const angle = frameIndex * Math.PI / 4;
             for (let radius = 2; radius <= 13; radius += 1) {
               const x = Math.round(15.5 + Math.cos(angle) * radius);
               const y = Math.round(15.5 + Math.sin(angle) * radius);
-              if (x >= 0 && x < SIZE && y >= 0 && y < SIZE) frame[y * SIZE + x] = 1;
+              if (x >= 0 && x < PANEL_SIZE && y >= 0 && y < PANEL_SIZE) frame[y * PANEL_SIZE + x] = 1;
             }
             return frame;
           });
@@ -1135,13 +1578,13 @@
         if (name === "treasure") {
           return Array.from({length: 18}, (_, frameIndex) => makeTreasureFrame(frameIndex));
         }
-        return [blankBitmap()];
+        return [new Uint8Array(PANEL_PIXEL_COUNT)];
       }
 
       function applyAnimationSample(name) {
         const labels = { blink: "まばたき", scanner: "走査線", ball: "跳ねる球", spinner: "回転バー", treasure: "宝箱→アイテム" };
         if (name === "treasure") $("frameDelay").value = "160";
-        setAnimationFrames(makeAnimationSample(name), `サンプルアニメーション「${labels[name]}」を適用しました。`);
+        setAnimationFrames(makeAnimationSample(name).map((frame) => fitSample(frame)), `サンプルアニメーション「${labels[name]}」を適用しました。`);
       }
 
       function readNumberSetting(id, minimum, maximum, fallback) {
@@ -1151,96 +1594,115 @@
         return normalized;
       }
 
-      function textToBitmap(character) {
+      function updateTextControls() {
+        const effect = $("textEffect").value;
+        const scrolling = effect.startsWith("scroll-");
+        $("textStepsField").hidden = !["morph", "morph-letters", "explode", "assemble"].includes(effect);
+        $("textScrollField").hidden = !scrolling;
+        $("textTypingField").hidden = effect !== "typewriter";
+        $("textHoldField").hidden = effect === "static" || scrolling;
+        $("generateTextButton").textContent = effect === "static" ? "文字を配置" : "アニメーションを生成";
+        const hints = {
+          static: "現在のフレームに配置します。改行で複数行に。",
+          typewriter: "全文の配置を保って、1文字ずつ表示します。",
+          blink: "文章全体を3回点滅させます。停止フレーム数で点滅の間隔を調整。",
+          explode: "文章のドットが中心から外へ散って消えます。",
+          assemble: "散らばったドットが集まって文章になります。",
+          morph: "ドットが変形し、文章全体が現れます。",
+          "morph-letters": "従来の1文字ずつ切り替わる変形です。改行は読み飛ばします。"
+        };
+        $("textEffectHint").textContent = (scrolling ? "長い文章も画面の外から流せます。自動サイズは読みやすさを優先。" : hints[effect]) + (effect === "static" ? "" : " 生成すると全フレームを置き換えます。") + " Ctrl+Enterで生成。";
+      }
+
+      function rasterizeText(text, effect) {
         const canvas = document.createElement("canvas");
-        canvas.width = SIZE;
-        canvas.height = SIZE;
         const context = canvas.getContext("2d", { willReadFrequently: true });
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, SIZE, SIZE);
-        context.fillStyle = "#000000";
-        context.font = 'bold 25px "Yu Gothic UI", "Meiryo", "Segoe UI", sans-serif';
-        context.textAlign = "center";
-        context.textBaseline = "middle";
-        context.fillText(character, SIZE / 2, SIZE / 2);
-        const rgba = context.getImageData(0, 0, SIZE, SIZE).data;
-        const bitmap = new Uint8Array(PIXEL_COUNT);
-        for (let index = 0; index < PIXEL_COUNT; index += 1) {
-          const offset = index * 4;
-          const luminance = 0.2126 * rgba[offset] + 0.7152 * rgba[offset + 1] + 0.0722 * rgba[offset + 2];
-          bitmap[index] = rgba[offset + 3] > 0 && luminance < 180 ? 1 : 0;
-        }
-        return bitmap;
-      }
-
-      function morphNoise(index, seed) {
-        let value = (Math.imul(index + 1, 374761393) + Math.imul(seed + 1, 668265263)) | 0;
-        value = Math.imul(value ^ (value >>> 13), 1274126177);
-        value ^= value >>> 16;
-        return (value >>> 0) / 4294967295;
-      }
-
-      function sampleBitmap(bitmap, x, y) {
-        if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return 0;
-        return bitmap[y * SIZE + x];
-      }
-
-      function makeMorphFrame(fromBitmap, toBitmap, step, totalSteps, seed) {
-        if (step >= totalSteps) return Uint8Array.from(toBitmap);
-        const progress = step / totalSteps;
-        const amplitude = Math.max(0, Math.round(2 * (1 - progress)));
-        const frame = new Uint8Array(PIXEL_COUNT);
-        for (let y = 0; y < SIZE; y += 1) {
-          for (let x = 0; x < SIZE; x += 1) {
-            const index = y * SIZE + x;
-            const waveX = Math.round(Math.sin((y + seed) * 0.55 + progress * Math.PI * 1.5) * amplitude);
-            const waveY = Math.round(Math.cos((x + seed) * 0.42 - progress * Math.PI) * amplitude / 2);
-            const transformedTarget = sampleBitmap(toBitmap, x + waveX, y + waveY);
-            frame[index] = morphNoise(index, seed) < progress ? transformedTarget : fromBitmap[index];
-          }
-        }
-        return frame;
-      }
-
-      function makeTextAnimation(text) {
-        const transitionSteps = readNumberSetting("morphSteps", 2, 20, 8);
-        const holdFrames = readNumberSetting("textHoldFrames", 0, 20, 3);
-        const characters = Array.from(text);
-        const glyphs = characters.map((character) => textToBitmap(character));
-        const animation = [blankBitmap()];
-        let previous = animation[0];
-        glyphs.forEach((target, characterIndex) => {
-          for (let step = 1; step <= transitionSteps; step += 1) {
-            animation.push(makeMorphFrame(previous, target, step, transitionSteps, characterIndex + 1));
-          }
-          for (let hold = 0; hold < holdFrames; hold += 1) animation.push(Uint8Array.from(target));
-          previous = target;
-        });
-        return { animation, characterCount: characters.length, transitionSteps, holdFrames };
+        const lines = text.split("\n");
+        const horizontalScroll = ["scroll-left", "scroll-right"].includes(effect);
+        const verticalScroll = ["scroll-up", "scroll-down"].includes(effect);
+        const automatic = $("textFontSize").value === "auto";
+        const font = (size) => `bold ${size}px "Yu Gothic UI", "Meiryo", "Segoe UI", sans-serif`;
+        let fontSize = automatic ? (horizontalScroll || verticalScroll ? Math.min(24, Math.floor(Math.min(WIDTH, HEIGHT) * .375)) : Math.min(48, Math.min(WIDTH, HEIGHT) - 4)) : Number($("textFontSize").value);
+        let metrics, ascent, lineHeight, width, height;
+        const measure = () => {
+          context.font = font(fontSize);
+          metrics = lines.map(line => context.measureText(line));
+          ascent = Math.ceil(Math.max(fontSize * .8, ...metrics.map(m => m.actualBoundingBoxAscent)));
+          const descent = Math.ceil(Math.max(fontSize * .2, ...metrics.map(m => m.actualBoundingBoxDescent)));
+          lineHeight = ascent + descent + 1;
+          width = Math.max(1, Math.ceil(Math.max(...metrics.map(m => Math.max(m.width, m.actualBoundingBoxLeft + m.actualBoundingBoxRight))))) + 2;
+          height = lineHeight * lines.length + 1;
+        };
+        measure();
+        const fits = () => (horizontalScroll || width <= WIDTH) && (verticalScroll || height <= HEIGHT);
+        while (automatic && fontSize > 5 && !fits()) { fontSize -= 1; measure(); }
+        if (!fits()) throw new Error("文字がキャンバスに収まりません。文字サイズを小さくするか、改行・スクロールを使ってください。");
+        canvas.width = width;
+        canvas.height = height;
+        const draw = (visibleCount) => {
+          context.fillStyle = "#ffffff";
+          context.fillRect(0, 0, width, height);
+          context.font = font(fontSize);
+          context.textAlign = "left";
+          context.textBaseline = "alphabetic";
+          context.fillStyle = "#000000";
+          let remaining = visibleCount;
+          lines.forEach((line, lineIndex) => {
+            const characters = Array.from(line);
+            const visible = characters.slice(0, Math.max(0, remaining)).join("");
+            const metric = metrics[lineIndex];
+            const extent = Math.max(metric.width, metric.actualBoundingBoxLeft + metric.actualBoundingBoxRight);
+            const left = Math.floor((width - extent) / 2) + Math.max(0, metric.actualBoundingBoxLeft);
+            context.fillText(visible, left, 1 + ascent + lineIndex * lineHeight);
+            remaining -= characters.length + 1;
+          });
+          const rgba = context.getImageData(0, 0, width, height).data;
+          return Uint8Array.from({ length: width * height }, (_, index) => rgba[index * 4] < 180 ? inkValue() : 0);
+        };
+        const characterCount = Array.from(text).length;
+        const bitmap = draw(characterCount);
+        const reveals = effect === "typewriter" ? Array.from({ length: characterCount }, (_, index) => draw(index + 1)) : [];
+        return { bitmap, width, height, fontSize, reveals };
       }
 
       function generateTextAnimation() {
-        const text = $("textSequence").value;
-        const characters = Array.from(text);
-        if (!characters.length) {
-          $("imageStatus").className = "status-line error";
-          $("imageStatus").textContent = "表示する文字列を入力してください。";
-          return;
+        const text = $("textSequence").value.replace(/\r\n?/g, "\n");
+        const feedback = $("textFeedback");
+        try {
+          if (!text.trim()) throw new Error("表示する文字列を入力してください。");
+          if (Array.from(text).length > 64) throw new Error("文字列は改行を含め64文字以内にしてください。");
+          const effect = $("textEffect").value;
+          const pages = (effect === "morph-letters" ? Array.from(text).filter(c => c !== "\n") : [text]).map(page => rasterizeText(page, effect));
+          const animation = LCDTextEffects.build(pages, {
+            width: WIDTH, height: HEIGHT, effect,
+            steps: readNumberSetting("morphSteps", 2, 32, 12),
+            hold: readNumberSetting("textHoldFrames", 0, 20, 4),
+            scrollStep: readNumberSetting("textScrollStep", 1, 8, 2),
+            typingDelay: readNumberSetting("textTypingDelay", 1, 10, 2)
+          });
+          stopPlayback();
+          const effectName = $("textEffect").selectedOptions[0].textContent;
+          if (effect === "static") {
+            setPixels(animation[0], "文字を現在のフレームに配置しました。");
+            encodeSafe();
+          } else {
+            setAnimationFrames(animation, `文字アニメーション「${effectName}」を生成しました。`);
+          }
+          const sizes = [...new Set(pages.map(page => page.fontSize))].sort((a, b) => a - b);
+          const sizeDescription = sizes.length === 1 ? `${sizes[0]}px` : `${sizes[0]}〜${sizes.at(-1)}px`;
+          feedback.className = "text-feedback";
+          feedback.textContent = effect === "static" ? `${sizeDescription}で配置しました。` : `${sizeDescription}・${animation.length}フレーム。「再生」で確認できます。`;
+        } catch (error) {
+          feedback.className = "text-feedback error";
+          feedback.textContent = error.message;
         }
-        if (characters.length > 16) {
-          $("imageStatus").className = "status-line error";
-          $("imageStatus").textContent = "文字列は16文字以内にしてください。";
-          return;
-        }
-        stopPlayback();
-        const result = makeTextAnimation(text);
-        $("frameDelay").value = "100";
-        setAnimationFrames(result.animation, `文字モーフ「${text}」を生成しました。`);
-        $("imageStatus").textContent = `「${text}」を${result.characterCount}文字、${result.animation.length} framesで生成しました（変形${result.transitionSteps} / 停止${result.holdFrames} frames）。`;
       }
 
-      function applyTextSample(text) {
-        $("textSequence").value = text;
+      function applyTextSample(button) {
+        $("textSequence").value = button.dataset.textSample;
+        $("textEffect").value = button.dataset.textEffect;
+        $("textFontSize").value = "auto";
+        updateTextControls();
         generateTextAnimation();
       }
 
@@ -1255,13 +1717,13 @@
         image.onload = () => {
           try {
             const canvas = document.createElement("canvas");
-            canvas.width = SIZE;
-            canvas.height = SIZE;
+            canvas.width = WIDTH;
+            canvas.height = HEIGHT;
             const context = canvas.getContext("2d", { willReadFrequently: true });
             context.imageSmoothingEnabled = false;
-            context.clearRect(0, 0, SIZE, SIZE);
-            context.drawImage(image, 0, 0, SIZE, SIZE);
-            const rgba = context.getImageData(0, 0, SIZE, SIZE).data;
+            context.clearRect(0, 0, WIDTH, HEIGHT);
+            context.drawImage(image, 0, 0, WIDTH, HEIGHT);
+            const rgba = context.getImageData(0, 0, WIDTH, HEIGHT).data;
             const threshold = Number($("threshold").value);
             const mode = $("binarizeMode").value;
             const bitmap = new Uint8Array(PIXEL_COUNT);
@@ -1271,14 +1733,17 @@
               const green = rgba[offset + 1];
               const blue = rgba[offset + 2];
               const alpha = rgba[offset + 3];
-              if (mode === "alpha") {
+              if (bitDepth() === 5) {
+                bitmap[index] = LCDColors.fromRGBA(red, green, blue, alpha, pixelMode);
+              } else if (mode === "alpha") {
                 bitmap[index] = alpha >= threshold ? 1 : 0;
               } else {
                 const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
                 bitmap[index] = alpha === 0 ? 0 : (luminance < threshold ? 1 : 0);
               }
             }
-            setPixels(bitmap, `「${file.name}」を32×32へnearest neighbor変換し、${mode === "alpha" ? "alpha" : "輝度"}で2値化しました。`);
+            const conversion = bitDepth() === 5 ? (pixelMode === "gray32" ? "32段階の明度に変換" : "固定32色に減色") : (mode === "alpha" ? "透明度で白黒化" : "輝度で白黒化");
+            setPixels(bitmap, `「${file.name}」を${WIDTH}×${HEIGHT}で${conversion}して読み込みました。`);
             encodeSafe();
           } catch (error) {
             $("imageStatus").className = "status-line error";
@@ -1305,30 +1770,71 @@
           helper.style.opacity = "0";
           document.body.appendChild(helper);
           helper.select();
-          document.execCommand("copy");
+          const copied = document.execCommand("copy");
           helper.remove();
+          if (!copied) {
+            $("outputFeedback").textContent = "コピーできませんでした。出力欄を選択して手動でコピーしてください。";
+            safeOutput.focus();
+            safeOutput.select();
+            return;
+          }
         }
-        $("imageStatus").className = "status-line ok";
-        $("imageStatus").textContent = statusMessage;
+        $("outputFeedback").textContent = statusMessage;
+      }
+
+      function paintThrough(index) {
+        const start = lastPaintIndex ?? index;
+        const startX = start % WIDTH;
+        const startY = Math.floor(start / WIDTH);
+        const dx = index % WIDTH - startX;
+        const dy = Math.floor(index / WIDTH) - startY;
+        const steps = Math.max(Math.abs(dx), Math.abs(dy), 1);
+        for (let step = 1; step <= steps; step += 1) {
+          const x = Math.round(startX + dx * step / steps);
+          const y = Math.round(startY + dy * step / steps);
+          setPixel(y * WIDTH + x, paintValue);
+        }
+        lastPaintIndex = index;
+      }
+
+      function focusPixel(index) {
+        const previous = dotGrid.querySelector('[tabindex="0"]');
+        if (previous) previous.tabIndex = -1;
+        const cell = dotGrid.children[index];
+        cell.tabIndex = 0;
+        cell.focus({ preventScroll: true });
       }
 
       dotGrid.addEventListener("pointerdown", (event) => {
         const cell = event.target.closest(".pixel");
         if (!cell) return;
         event.preventDefault();
+        stopPlayback();
         const index = Number(cell.dataset.index);
+        focusPixel(index);
         isPainting = true;
-        paintValue = pixels[index] ? 0 : 1;
+        paintValue = bitDepth() === 1 ? (pixels[index] ? 0 : 1) : (event.shiftKey ? 0 : inkValue());
         suppressNextClick = true;
-        setPixel(index, paintValue);
+        lastPaintIndex = null;
+        paintThrough(index);
       });
 
       dotGrid.addEventListener("pointerover", (event) => {
         if (!isPainting) return;
         const cell = event.target.closest(".pixel");
         if (!cell) return;
-        setPixel(Number(cell.dataset.index), paintValue);
+        paintThrough(Number(cell.dataset.index));
       });
+
+      // Touch pointers stay captured by the starting cell; locate the dot under the finger.
+      dotGrid.addEventListener("pointermove", (event) => {
+        if (!isPainting || event.pointerType === "mouse") return;
+        const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest(".pixel");
+        if (cell && dotGrid.contains(cell)) paintThrough(Number(cell.dataset.index));
+        else lastPaintIndex = null;
+      });
+
+      dotGrid.addEventListener("pointerleave", () => { lastPaintIndex = null; });
 
       dotGrid.addEventListener("click", (event) => {
         const cell = event.target.closest(".pixel");
@@ -1338,20 +1844,29 @@
           return;
         }
         const index = Number(cell.dataset.index);
-        setPixel(index, !pixels[index]);
+        setPixel(index, bitDepth() === 1 ? Number(!pixels[index]) : (event.shiftKey ? 0 : inkValue()));
       });
 
       dotGrid.addEventListener("keydown", (event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
         const cell = event.target.closest(".pixel");
         if (!cell) return;
-        event.preventDefault();
         const index = Number(cell.dataset.index);
-        setPixel(index, !pixels[index]);
+        const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -WIDTH, ArrowDown: WIDTH };
+        if (event.key in offsets) {
+          event.preventDefault();
+          const x = index % WIDTH;
+          if ((event.key === "ArrowLeft" && x === 0) || (event.key === "ArrowRight" && x === WIDTH - 1)) return;
+          focusPixel(Math.max(0, Math.min(PIXEL_COUNT - 1, index + offsets[event.key])));
+        } else if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          stopPlayback();
+          setPixel(index, bitDepth() === 1 ? Number(!pixels[index]) : (event.shiftKey ? 0 : inkValue()));
+        }
       });
 
-      window.addEventListener("pointerup", () => { isPainting = false; });
-      window.addEventListener("blur", () => { isPainting = false; });
+      window.addEventListener("pointerup", () => { isPainting = false; lastPaintIndex = null; });
+      window.addEventListener("pointercancel", () => { isPainting = false; lastPaintIndex = null; suppressNextClick = false; });
+      window.addEventListener("blur", () => { isPainting = false; lastPaintIndex = null; });
 
       $("imageInput").addEventListener("change", (event) => {
         const file = event.target.files && event.target.files[0];
@@ -1359,20 +1874,56 @@
         event.target.value = "";
       });
       $("threshold").addEventListener("input", setThresholdLabel);
+      $("pixelMode").addEventListener("change", () => {
+        const nextMode = $("pixelMode").value;
+        if (nextMode === "mono" && pixelMode !== "mono" && frames.some(frame => frame.some(value => value !== 0 && value !== 31))) {
+          stopPlayback();
+          $("pixelMode").value = pixelMode;
+          $("colorModeDialog").returnValue = "cancel";
+          $("colorModeDialog").showModal();
+        } else applyPixelMode(nextMode);
+      });
+      $("colorModeDialog").addEventListener("close", () => {
+        if ($("colorModeDialog").returnValue === "convert") applyPixelMode("mono");
+      });
+      $("brushValue").addEventListener("input", () => {
+        const value = Number($("brushValue").value);
+        if ($("brushValue").value !== "" && Number.isInteger(value) && value >= 0 && value <= 31) { brushValue = value; updateBrush(); }
+      });
+      $("brushValue").addEventListener("change", updateBrush);
+      $("gradientButton").addEventListener("click", () => {
+        stopPlayback();
+        setPixels(Uint8Array.from({ length: PIXEL_COUNT }, (_, index) => Math.floor((index % WIDTH) * 32 / WIDTH)), "値0〜31を左から順に配置しました。");
+        encodeSafe();
+      });
+      $("decodeMode").addEventListener("change", decodeSafeFromInput);
+      $("canvasSize").addEventListener("change", changeCanvasSize);
+      $("panelColumns").addEventListener("input", updateLayoutPreview);
+      $("panelRows").addEventListener("input", updateLayoutPreview);
+      $("layoutForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        try { requestCanvasSize(readLayoutSize()); }
+        catch (_) { updateLayoutPreview(); }
+      });
+      $("codeDetails").addEventListener("toggle", renderSafeListFrame);
+      $("resizeDialog").addEventListener("close", () => {
+        if ($("resizeDialog").returnValue === "crop" && pendingCanvasSize !== null) applyCanvasSize(pendingCanvasSize);
+        pendingCanvasSize = null;
+      });
       $("clearButton").addEventListener("click", () => {
         stopPlayback();
-        setPixels(blankBitmap(), "グリッドをClearしました。");
+        setPixels(blankBitmap(), "現在のフレームを消去しました。");
         encodeSafe();
       });
       $("fillButton").addEventListener("click", () => {
         stopPlayback();
-        setPixels(new Uint8Array(PIXEL_COUNT).fill(1), "グリッドをFillしました。");
+        setPixels(new Uint8Array(PIXEL_COUNT).fill(inkValue()), "現在のフレームを塗りつぶしました。");
         encodeSafe();
       });
       $("invertButton").addEventListener("click", () => {
         stopPlayback();
-        const next = Uint8Array.from(pixels, (value) => value ? 0 : 1);
-        setPixels(next, "グリッドをInvertしました。");
+        const next = Uint8Array.from(pixels, value => (bitDepth() === 1 ? 1 : 31) - value);
+        setPixels(next, "現在のフレームの値を反転しました。");
         encodeSafe();
       });
       frameStrip.addEventListener("click", (event) => {
@@ -1396,21 +1947,68 @@
       $("stopButton").addEventListener("click", stopPlayback);
       $("safeEncodeButton").addEventListener("click", encodeSafe);
       $("safeDecodeButton").addEventListener("click", decodeSafeFromInput);
-      $("safeCopyButton").addEventListener("click", () => copyValue(safeOutput.value, `Safeをコピーしました（${safeOutput.value.length} UTF-16 code units）。`));
+      $("decodeLayout").addEventListener("change", decodeSafeFromInput);
+      $("safeCopyButton").addEventListener("click", () => copyValue(safeOutput.value, "コピーしました。Resoniteに貼り付けできます。"));
+      safeOutput.addEventListener("input", () => {
+        clearDecodedPreview();
+        updateDecodeLayoutField();
+        $("safeLength").textContent = String(safeOutput.value.length);
+        $("safeFrameCount").textContent = safeOutput.value.length ? String(safeOutput.value.split("/").length) : "0";
+        $("safeVerification").className = "verification stale";
+        $("safeVerification").textContent = "文字列が変更されました。「デコード」で内容を確認してください。";
+        $("safeCopyButton").disabled = true;
+        $("outputFeedback").textContent = "";
+      });
+      document.querySelector(".help-link").addEventListener("click", () => {
+        $("technicalDetails").open = true;
+      });
+      const sourceTabs = Array.from(document.querySelectorAll("[data-source]"));
+      function selectSourceTab(selectedTab) {
+        sourceTabs.forEach((tab) => {
+          const selected = tab === selectedTab;
+          tab.setAttribute("aria-selected", String(selected));
+          tab.tabIndex = selected ? 0 : -1;
+          $(tab.getAttribute("aria-controls")).hidden = !selected;
+        });
+      }
+      sourceTabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => selectSourceTab(tab));
+        tab.addEventListener("keydown", (event) => {
+          let nextIndex;
+          if (event.key === "ArrowRight") nextIndex = (index + 1) % sourceTabs.length;
+          else if (event.key === "ArrowLeft") nextIndex = (index + sourceTabs.length - 1) % sourceTabs.length;
+          else if (event.key === "Home") nextIndex = 0;
+          else if (event.key === "End") nextIndex = sourceTabs.length - 1;
+          else return;
+          event.preventDefault();
+          selectSourceTab(sourceTabs[nextIndex]);
+          sourceTabs[nextIndex].focus();
+        });
+      });
       document.querySelectorAll("[data-pattern]").forEach((button) => {
         button.addEventListener("click", () => applyPattern(button.dataset.pattern));
       });
       document.querySelectorAll("[data-animation]").forEach((button) => {
         button.addEventListener("click", () => applyAnimationSample(button.dataset.animation));
       });
+      $("textEffect").addEventListener("change", updateTextControls);
+      for (const id of ["textSequence", "textEffect", "textFontSize", "morphSteps", "textHoldFrames", "textScrollStep", "textTypingDelay"]) {
+        $(id).addEventListener("input", () => {
+          $("textFeedback").className = "text-feedback";
+          $("textFeedback").textContent = "設定を変更しました。生成すると反映されます。";
+        });
+      }
       $("generateTextButton").addEventListener("click", generateTextAnimation);
       $("textSequence").addEventListener("keydown", (event) => {
-        if (event.key === "Enter") generateTextAnimation();
+        if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); generateTextAnimation(); }
       });
       document.querySelectorAll("[data-text-sample]").forEach((button) => {
-        button.addEventListener("click", () => applyTextSample(button.dataset.textSample));
+        button.addEventListener("click", () => applyTextSample(button));
       });
 
+      updateTextControls();
+      updateColorControls();
+      updateCanvasSizeUI();
       renderGrid();
       redrawEditor();
       renderFrameStrip();
