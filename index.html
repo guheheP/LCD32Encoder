@@ -183,6 +183,8 @@
     .verification.stale { color: #e7c68a; border-color: #665336; background: #30291f; }
     .output-feedback { font-size: 11px; color: var(--accent); margin-top: 8px; }
     .output-feedback:empty { display: none; }
+    .gif-controls { display: grid; gap: 10px; }
+    .gif-controls p { margin: 0; }
     summary { list-style: none; cursor: pointer; }
     summary::-webkit-details-marker { display: none; }
     .disclosure-label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
@@ -479,6 +481,16 @@
             <p id="outputFeedback" class="output-feedback" role="status"></p>
             <div id="safeVerification" class="verification stale" aria-live="polite">検証待ち</div>
             <details id="codeDetails" class="code-details"><summary class="disclosure-label">表示中のフレームの値を確認</summary><div id="safeList" class="safe-list"><div class="empty-list">エンコードすると表示されます。</div></div></details>
+          </div>
+        </section>
+        <section class="inspector-section" aria-labelledby="gifTitle">
+          <div class="panel-heading"><h2 id="gifTitle">GIFで保存</h2><span class="badge">画像</span></div>
+          <div class="panel-body gif-controls">
+            <div class="field"><label for="gifScale">出力倍率</label><select id="gifScale"><option value="1">1倍（原寸）</option><option value="2">2倍</option><option value="4" selected>4倍</option><option value="8">8倍</option></select></div>
+            <div class="field"><label for="gifRepeat">繰り返し</label><select id="gifRepeat"><option value="loop">無限ループ</option><option value="once">1回だけ</option></select></div>
+            <button id="gifExportButton" type="button">GIFをダウンロード</button>
+            <p class="field-note">編集中の全フレームを、プレビューの色と再生間隔で保存します。パネルをつないだ1枚の画像になります。</p>
+            <p id="gifStatus" class="output-feedback" role="status"></p>
           </div>
         </section>
       </aside>
@@ -1403,6 +1415,78 @@
       return Object.freeze({ presets, build });
     })();
   </script>
+  <script id="lcd-gif">
+    const LCDGif = (() => {
+      "use strict";
+      // GIF89a, indexed colours and LZW. No canvas quantization or external library.
+      function create({ width, height, palette, scale = 1, delay = 200, loop = true }) {
+        if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 ||
+            ![1,2,4,8].includes(scale) || width*scale > 2048 || height*scale > 2048)
+          throw new Error("GIFの画像サイズが不正です。");
+        if (!Array.isArray(palette) || palette.length < 2 || palette.length > 256 ||
+            palette.some(rgb => rgb.length !== 3 || rgb.some(v => !Number.isInteger(v) || v < 0 || v > 255)))
+          throw new Error("GIFのパレットが不正です。");
+        if (!Number.isFinite(delay) || delay < 10 || delay > 655350) throw new Error("GIFの再生間隔が不正です。");
+        const w=width*scale, h=height*scale, colourBits=Math.max(1,Math.ceil(Math.log2(palette.length)));
+        const minCodeSize=Math.max(2,colourBits), clear=1<<minCodeSize, end=clear+1;
+        const parts=[], header=[];
+        const word=(bytes,n)=>bytes.push(n&255,(n>>8)&255);
+        const ascii=(bytes,text)=>{for(const c of text) bytes.push(c.charCodeAt(0));};
+        ascii(header,"GIF89a"); word(header,w); word(header,h);
+        header.push(0x80|0x70|(colourBits-1),0,0);
+        for(let k=0;k<(1<<colourBits);k++) header.push(...(palette[k] || [0,0,0]));
+        if(loop) {header.push(0x21,0xff,11);ascii(header,"NETSCAPE2.0");header.push(3,1,0,0,0);}
+        parts.push(Uint8Array.from(header));
+        let frameCount=0, finished=false;
+        function addFrame(frame) {
+          if(finished) throw new Error("保存済みのGIFにフレームは追加できません。");
+          if(!frame || frame.length !== width*height || Array.from(frame).some(v=>!Number.isInteger(v)||v<0||v>=palette.length))
+            throw new Error("GIFのフレームデータが不正です。");
+          if((frameCount+1)*w*h>64*1024*1024) throw new Error("GIFの出力が大きいため、出力倍率またはフレーム数を減らしてください。");
+          const data=[], meta=[0x21,0xf9,4,4];
+          word(meta,Math.round(delay/10));meta.push(0,0,0x2c);
+          word(meta,0);word(meta,0);word(meta,w);word(meta,h);meta.push(0,minCodeSize);
+          let dict=new Map(), next=end+1, bits=minCodeSize+1, packed=0, pending=0;
+          const emit=code=>{
+            packed|=code<<pending; pending+=bits;
+            while(pending>=8) {data.push(packed&255);packed>>>=8;pending-=8;}
+          };
+          const emitPrefix=code=>{
+            emit(code);
+            // The decoder adds an entry one emitted code later than the encoder.
+            if(next===(1<<bits) && bits<12) bits++;
+          };
+          emit(clear);
+          let prefix=-1;
+          for(let y=0;y<h;y++) for(let x=0;x<w;x++) {
+            const value=frame[Math.floor(y/scale)*width+Math.floor(x/scale)];
+            if(prefix<0) {prefix=value;continue;}
+            const key=prefix*256+value, known=dict.get(key);
+            if(known!==undefined) {prefix=known;continue;}
+            emitPrefix(prefix);
+            if(next<4096) dict.set(key,next++);
+            else {emit(clear);dict=new Map();next=end+1;bits=minCodeSize+1;}
+            prefix=value;
+          }
+          emitPrefix(prefix);emit(end);if(pending) data.push(packed&255);
+          parts.push(Uint8Array.from(meta));
+          for(let k=0;k<data.length;k+=255) {
+            const chunk=data.slice(k,k+255);parts.push(Uint8Array.from([chunk.length,...chunk]));
+          }
+          parts.push(Uint8Array.of(0));frameCount++;
+        }
+        function finish() {
+          if(finished || !frameCount) throw new Error("GIFには1フレーム以上必要です。");
+          finished=true;parts.push(Uint8Array.of(0x3b));
+          const bytes=new Uint8Array(parts.reduce((n,p)=>n+p.length,0));
+          let offset=0;for(const part of parts) {bytes.set(part,offset);offset+=part.length;}
+          return bytes;
+        }
+        return {addFrame,finish};
+      }
+      return Object.freeze({create});
+    })();
+  </script>
   <script>
     (() => {
       "use strict";
@@ -2211,6 +2295,31 @@
         return [new Uint8Array(PANEL_PIXEL_COUNT)];
       }
 
+      async function exportGif() {
+        const button=$("gifExportButton"), status=$("gifStatus");
+        button.disabled=true;
+        try {
+          const size=canvasSize(), scale=Number($("gifScale").value), mode=pixelMode;
+          const snapshot=frames.map(frame=>Uint8Array.from(frame));
+          const delay=Math.max(50,Math.min(5000,Number($("frameDelay").value)||200));
+          const parseHex=hex=>[1,3,5].map(start=>parseInt(hex.trim().slice(start,start+2),16));
+          const palette=mode==="mono" ? [parseHex(LCD_OFF),parseHex(LCD_ON)] : Array.from({length:32},(_,i)=>LCDColors.rgb(i,mode));
+          if(snapshot.length*size.width*size.height*scale*scale>64*1024*1024)
+            throw new Error("GIFの出力が大きいため、出力倍率またはフレーム数を減らしてください。");
+          const encoder=LCDGif.create({...size,palette,scale,delay,loop:$("gifRepeat").value==="loop"});
+          for(let i=0;i<snapshot.length;i++) {
+            if(i%4===0) {status.textContent=`GIFを作成中… ${i} / ${snapshot.length}フレーム`;await new Promise(resolve=>setTimeout(resolve,0));}
+            encoder.addFrame(snapshot[i]);
+          }
+          const bytes=encoder.finish(), url=URL.createObjectURL(new Blob([bytes],{type:"image/gif"}));
+          const link=document.createElement("a");link.href=url;
+          link.download=`lcd-${size.width*scale}x${size.height*scale}-${snapshot.length}frames.gif`;
+          document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+          status.textContent=`${size.width*scale}×${size.height*scale}・${snapshot.length}フレーム・${Math.round(delay/10)*10}ms間隔のGIFを作成しました（${Math.ceil(bytes.length/1024)}KB）。`;
+        } catch(error) {status.textContent=error.message || "GIFの保存に失敗しました。";}
+        finally {button.disabled=false;}
+      }
+
       function applyPortraitPreset(name) {
         const preset = LCDPortraitPresets.presets[name];
         const nextFrames = LCDPortraitPresets.build(name, { direction: $("portraitDirection").value, stroke: Number($("warpStroke").value), inverted: $("warpPolarity").value === "invert" }).map(frame => Uint8Array.from(frame, value => value ? inkValue() : 0));
@@ -2597,6 +2706,7 @@
       $("safeEncodeButton").addEventListener("click", encodeSafe);
       $("safeDecodeButton").addEventListener("click", decodeSafeFromInput);
       $("decodeLayout").addEventListener("change", decodeSafeFromInput);
+      $("gifExportButton").addEventListener("click", exportGif);
       $("safeCopyButton").addEventListener("click", () => copyValue(safeOutput.value, "コピーしました。Resoniteに貼り付けできます。"));
       safeOutput.addEventListener("input", () => {
         clearDecodedPreview();
