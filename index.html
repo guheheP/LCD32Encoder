@@ -810,11 +810,11 @@
   <script id="lcd-portrait-presets">
     const LCDPortraitPresets = (() => {
       const presets = {
-        dance: { label: "ダンス", count: 24, delay: 90 },
+        dance: { label: "ダンス", count: 32, delay: 90 },
         rope: { label: "なわとび", count: 20, delay: 80 },
         rocket: { label: "ロケット上昇", count: 32, delay: 90 },
         jellyfish: { label: "泳ぐクラゲ", count: 32, delay: 110 },
-        fireworks: { label: "打ち上げ花火", count: 32, delay: 90 }
+        fireworks: { label: "打ち上げ花火", count: 48, delay: 80 }
       };
       function build(name) {
         const preset = presets[name];
@@ -841,33 +841,65 @@
           const star = (x,y,r=2) => { line(x-r,y,x+r,y); line(x,y-r,x,y+r); };
           if (name === "dance" || name === "rope") {
             const dancing = name === "dance";
-            const sway = dancing ? Math.sin(a)*3 : 0;
-            const lift = dancing ? (1-Math.cos(a*2))*1.5 : (1-Math.cos(a))*4;
-            const x=16+sway, y=17-lift, hipY=38-lift;
-            disk(x,y,4);
-            line(x,y+5,x,hipY,2);
-            // Articulated elbows and knees keep the full-body silhouette readable.
-            const leftElbowY = dancing ? 26+Math.sin(a)*8-lift : 30-lift;
-            const rightElbowY = dancing ? 26-Math.sin(a)*8-lift : 30-lift;
-            line(x-1,y+9,x-8,leftElbowY,1);
-            line(x-8,leftElbowY,x-11,leftElbowY-7,1);
-            line(x+1,y+9,x+8,rightElbowY,1);
-            line(x+8,rightElbowY,x+11,rightElbowY-7,1);
-            const step = dancing ? Math.sin(a)*4 : Math.sin(a)*2;
-            line(x,hipY,11+step,47-lift,1);
-            line(11+step,47-lift,8+step,56-lift,1);
-            line(6+step,57-lift,10+step,57-lift,1);
-            line(x,hipY,22+step,46-lift,1);
-            line(22+step,46-lift,24-step,56-lift,1);
-            line(22-step,57-lift,26-step,57-lift,1);
-            line(7,61,26,61);
-            if (dancing) { star(4,8,1+(i%6<3)); star(27,11,1); }
-            else {
-              // The rope rotates in depth; its projected arc passes above and below the person.
-              for (let k=0;k<40;k++) {
-                const angle=Math.PI*k/39;
-                dot(16-14*Math.cos(angle),24-lift+Math.sin(a)*33*Math.sin(angle));
+            // Key poses: shoulder centre, hip centre, elbows, hands, knees, ankles.
+            const poses = [
+              [15,24,16,38, 7,26,5,18, 23,22,26,13, 11,47,8,57, 21,47,23,57],
+              [13,25,15,39, 6,29,4,23, 21,19,23,10, 10,48,8,57, 22,46,25,51],
+              [14,24,16,38, 6,21,4,12, 23,27,27,21, 11,47,9,57, 21,47,24,57],
+              [17,26,16,40, 8,27,5,20, 25,30,27,24, 12,48,11,57, 20,48,22,57],
+              [18,24,16,38, 9,22,6,13, 26,26,28,18, 11,47,8,57, 21,47,24,57],
+              [20,25,18,39, 12,19,10,10, 27,29,29,23, 10,46,6,51, 23,48,25,57],
+              [18,24,16,38, 9,27,5,21, 26,21,28,12, 11,47,8,57, 21,47,24,57],
+              [15,26,16,40, 7,30,4,24, 24,27,27,20, 12,48,10,57, 20,48,21,57]
+            ];
+            let pose;
+            const jump = Math.max(0, Math.cos(a));
+            if (dancing) {
+              const phase=t*poses.length, n=Math.floor(phase), f=phase-n;
+              const blend=f*f*(3-2*f);
+              pose=poses[n].map((v,k)=>v+(poses[(n+1)%poses.length][k]-v)*blend);
+            } else {
+              const lift=jump*6, crouch=Math.max(0,-Math.cos(a))*2;
+              pose=[16,24-lift+crouch,16,38-lift+crouch,
+                7,30-lift,4,35-lift, 25,30-lift,28,35-lift,
+                12,47-lift+crouch,13,57-lift, 20,47-lift+crouch,19,57-lift];
+            }
+            const [sx,sy,hx,hy,lex,ley,lhx,lhy,rex,rey,rhx,rhy,lkx,lky,lfx,lfy,rkx,rky,rfx,rfy]=pose;
+            const rope = () => {
+              let previous;
+              for(let k=0;k<=60;k++) {
+                const u=k/60, angle=Math.PI*u;
+                const point=[lhx+(rhx-lhx)*u, lhy+(rhy-lhy)*u+Math.cos(a)*27*Math.sin(angle)];
+                if(previous) line(...previous,...point);
+                previous=point;
               }
+            };
+            // Rear half of the rotation is occluded by the body; front half overlays it.
+            if(!dancing && Math.sin(a)<0) rope();
+            line(hx-2,hy,lkx,lky,1.6); line(lkx,lky,lfx,lfy,1.2);
+            line(hx+2,hy,rkx,rky,1.6); line(rkx,rky,rfx,rfy,1.2);
+            line(lfx-2,lfy+1,lfx+1,lfy+1,1); line(rfx-1,rfy+1,rfx+3,rfy+1,1);
+            line(sx-4,sy+1,lex,ley,1.5); line(lex,ley,lhx,lhy,1);
+            line(sx+4,sy+1,rex,rey,1.5); line(rex,rey,rhx,rhy,1);
+            disk(lhx,lhy,1.3); disk(rhx,rhy,1.3);
+            // Tapered shirt, neck, shaped head and a readable face in negative space.
+            for(let dy=0;dy<=hy-sy;dy++) {
+              const u=dy/(hy-sy), cx=sx+(hx-sx)*u, half=4.5-u*1.5;
+              line(cx-half,sy+dy,cx+half,sy+dy);
+            }
+            line(sx,sy-3,sx,sy,1);
+            disk(sx,sy-8,3.8); disk(sx,sy-5,2.6);
+            line(sx-2,sy-9,sx+2,sy-9); dot(sx-1,sy-7,0); dot(sx+2,sy-7,0);
+            dot(sx+1,sy-5,0);
+            // Collar and hem separate the clothing from the skin and legs.
+            dot(sx-1,sy+1,0); dot(sx,sy+2,0); dot(sx+1,sy+1,0);
+            for(let dx=-2;dx<=2;dx++) dot(hx+dx,hy-2,0);
+            if(!dancing && Math.sin(a)>=0) rope();
+            line(10,62,22,62);
+            if(dancing) {
+              // Small music notes stay outside the silhouette.
+              disk(3,8,1); line(4,8,4,3); line(4,3,7,4);
+              disk(27,7,1); line(28,7,28,2); dot(29,3);
             }
           } else if (name === "rocket") {
             const y = 70-t*94;
@@ -894,22 +926,38 @@
               dot(bx-1,by); dot(bx+1,by); dot(bx,by-1); dot(bx,by+1);
             }
           } else if (name === "fireworks") {
-            if(i<12) {
-              const y=60-i*3;
-              line(16,y,16,y+5); dot(15,y+7); dot(17,y+9);
+            const burst=14;
+            if(i<burst) {
+              const y=60-40*(1-(1-i/burst)**1.5);
+              disk(16,y,1);
+              for(let k=1;k<10;k++) if((k+i)%3!==0) dot(16+Math.sin(k+i)*.8,y+k);
             } else {
-              const age=(i-12)/20, radius=2+age*19;
-              for(let k=0;k<12;k++) {
-                const angle=k*Math.PI/6;
-                const x=16+Math.cos(angle)*radius*.73;
-                const y=24+Math.sin(angle)*radius+age*age*14;
-                if(age<.75 || (k+i)%3!==0) {
-                  line(x-Math.cos(angle)*2,y-Math.sin(angle)*2,x,y);
-                  if(age<.3) disk(x,y,1);
+              const age=(i-burst)/(preset.count-burst-1);
+              if(age<.09) star(16,20,2+Math.round(age*50));
+              // Two spherical shells expand quickly, slow down, then fall and burn out.
+              for(let ring=0;ring<2;ring++) for(let k=0;k<24;k++) {
+                const angle=k*Math.PI/12+ring*.13;
+                const speed=ring===0 ? 14 : 9;
+                const lifetime=.62+((k*7+ring*3)%11)*.032;
+                if(age>lifetime) continue;
+                const point = q => {
+                  const radius=speed*(1-Math.exp(-q*4));
+                  return [16+Math.cos(angle)*radius,20+Math.sin(angle)*radius+q*q*23];
+                };
+                const [x,y]=point(age);
+                const tail=Math.max(0,age-.16);
+                const [tx,ty]=point(tail);
+                if(age<.65) line(tx,ty,x,y);
+                else if((k+i)%3!==0) dot(x,y);
+                if(age>.18 && age<.75 && k%3===0) {
+                  const [px,py]=point(Math.max(0,age-.15));
+                  dot(px,py+2);
                 }
               }
             }
-            line(7,62,24,62);
+            // A small launch stand anchors the vertical composition during the pause.
+            line(14,62,18,62); dot(15,61); dot(17,61);
+
           }
           return bitmap;
         });

@@ -23,3 +23,19 @@ for(const name of Object.keys(presets.presets)) test(`${name}: animated portrait
   codec.decodeFrames(encoded,{width:32,height:64}).forEach((f,i)=>assert.deepEqual(Array.from(f),Array.from(frames[i])));
 });
 test('unknown portrait preset is rejected',()=>assert.throws(()=>presets.build('missing')));
+
+test('firework sparks spread and fully burn out before the next launch',()=>{
+  const frames=presets.build('fireworks');
+  const counts=frames.map(f=>f.slice(0,60*32).filter(Boolean).length);
+  assert.ok(Math.max(...counts)>80);
+  assert.equal(counts.at(-1),0);
+  assert.ok(counts[0]>0);
+});
+test('human animations wrap without a discontinuous pose jump',()=>{
+  for(const name of ['dance','rope']) {
+    const frames=presets.build(name);
+    const difference=(a,b)=>a.reduce((sum,v,k)=>sum+(v!==b[k]),0);
+    const largestStep=Math.max(...frames.slice(1).map((f,i)=>difference(f,frames[i])));
+    assert.ok(difference(frames.at(-1),frames[0])<=largestStep);
+  }
+});
