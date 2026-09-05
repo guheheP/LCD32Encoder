@@ -11,6 +11,50 @@ const codec = vm.runInNewContext(source + '\nLCDCodec;');
 const blank = (size) => new Uint8Array(size * size);
 const sameBitmap = (actual, expected) => assert.deepEqual(Array.from(actual), Array.from(expected));
 
+for (const bits of [1, 5]) {
+  test(`${bits}bit panel-major golden order and legacy frame-major compatibility`, () => {
+    const size = { width: 96, height: 64 }, chunks = bits === 1 ? 69 : 342;
+    const frames = Array.from({ length: 3 }, () => new Uint8Array(6144));
+    const panels = Array.from({ length: 6 }, (_, p) => Array.from({ length: 3 }, (_, f) => {
+      const localIndex = bits === 1 ? p * 3 + f : 0;
+      const value = bits === 1 ? 1 : p * 3 + f + 1;
+      const x = p % 3 * 32 + localIndex % 32, y = Math.floor(p / 3) * 32 + Math.floor(localIndex / 32);
+      frames[f][y * 96 + x] = value;
+      const chars = new Array(chunks).fill(0x3000);
+      chars[Math.floor(localIndex / (15 / bits))] += value << ((localIndex % (15 / bits)) * bits);
+      return String.fromCharCode(...chars);
+    }));
+    const expected = panels.map(panel => panel.join('/')).join('|');
+    const old = frames.map((_, f) => panels.map(panel => panel[f]).join('|')).join('/');
+    assert.equal(codec.encodeFrames(frames, size, bits), expected);
+    for (const [value, order] of [[expected, 'panel-major'], [old, 'frame-major']]) {
+      const format = codec.detectFormat(value);
+      assert.equal(format.order, order);
+      assert.equal(format.panelCount, 6);
+      assert.equal(format.frameCount, 3);
+      assert.equal(format.bits, bits);
+      const decoded = codec.decodeFrames(value, size);
+      decoded.forEach((frame, f) => sameBitmap(frame, frames[f]));
+      assert.equal(codec.encodeFrames(decoded, size, bits), expected);
+    }
+    assert.equal(expected.split('|').length, 6);
+    for (const panel of expected.split('|')) assert.equal(panel.split('/').length, 3);
+    assert.equal(expected.length, (chunks + 1) * 6 * 3 - 1);
+  });
+}
+
+test('panel-major input rejects unequal frame counts, empty frames and corruption in later panels', () => {
+  const frame = '\u3000'.repeat(69), pair = frame + '/' + frame;
+  for (const input of [pair + '|' + frame, pair + '|' + pair + '/', pair + '||' + pair, frame + '//' + frame, pair + '|' + frame + '//']) {
+    assert.throws(() => codec.decodeFrames(input, { width: 64, height: 32 }));
+  }
+  assert.throws(() => codec.decodeFrames(pair + '|' + frame + '/' + 'A' + frame.slice(1), { width: 64, height: 32 }), /パネル1・フレーム1:.*Safe範囲/);
+  assert.throws(() => codec.decodeFrames(pair + '|' + frame + '/' + frame.slice(0, -1) + '\u3010', { width: 64, height: 32 }), /パネル1・フレーム1:.*未使用11bit/);
+  assert.equal(codec.detectFormat(frame + '|' + frame).order, 'panel-major');
+  assert.equal(codec.detectFormat(pair).panelCount, 1);
+  assert.equal(codec.detectFormat(pair).frameCount, 2);
+});
+
 test('32×32 Safe golden values stay compatible, including all-blank output', () => {
   assert.equal(codec.encodeFrames([blank(32)], 32), '\u3000'.repeat(69));
   const filled = blank(32).fill(1);
@@ -69,14 +113,14 @@ test('all four outer corners retain their coordinates and panel offsets', () => 
 });
 
 for (const size of [32, 64]) {
-  test(`${size}×${size} animations use / only between complete frames`, () => {
+  test(`${size}×${size} animations group every frame of each panel before |`, () => {
     const point = blank(size);
     point[point.length - 1] = 1;
     const frames = [blank(size), blank(size).fill(1), point];
     const output = codec.encodeFrames(frames, size);
     const units = size === 32 ? 69 : 279;
     assert.equal(output.length, 3 * units + 2);
-    assert.deepEqual(output.split('/').map((frame) => frame.length), [units, units, units]);
+    assert.deepEqual(output.split('|').map(panel => panel.split('/').map(frame => frame.length)), new Array(size === 32 ? 1 : 4).fill([69, 69, 69]));
     const decoded = codec.decodeFrames(output, size);
     assert.equal(decoded.length, 3);
     decoded.forEach((frame, index) => sameBitmap(frame, frames[index]));
@@ -132,7 +176,8 @@ test('legacy 276-unit frames still decode and re-encode with panel separators', 
   decoded.forEach((frame, index) => sameBitmap(frame, frames[index]));
   const updated = codec.encodeFrames(decoded, 64);
   assert.equal(updated.length, 279 * 3 + 2);
-  assert.equal(updated.replaceAll('|', ''), legacy);
+  const panelFrames = updated.split('|').map(panel => panel.split('/'));
+  assert.equal(frames.map((_, f) => panelFrames.map(panel => panel[f]).join('')).join('/'), legacy);
   for (const value of [legacy.slice(1), legacy + '\u3000']) {
     assert.throws(() => codec.decodeFrames(value, 64));
   }
@@ -168,7 +213,7 @@ for (const size of [{ width: 32, height: 64 }, { width: 64, height: 32 }]) {
       const frames = [bitmap, Uint8Array.from(bitmap, value => 1 - value)];
       const output = codec.encodeFrames(frames, size);
       assert.equal(output.length, 139 * 2 + 1);
-      assert.deepEqual(output.split('/').map(f => f.split('|').map(p => p.length)), [[69, 69], [69, 69]]);
+      assert.deepEqual(output.split('|').map(p => p.split('/').map(f => f.length)), [[69, 69], [69, 69]]);
       codec.decodeFrames(output, size).forEach((frame, i) => sameBitmap(frame, frames[i]));
     });
   }
@@ -215,7 +260,8 @@ for (const [width, height] of [[96, 32], [32, 96], [96, 64], [64, 96], [128, 32]
     const frames = [new Uint8Array(width * height), new Uint8Array(width * height).fill(1), Uint8Array.from({ length: width * height }, (_, index) => ((index % width) * 7 + Math.floor(index / width) * 11) % 19 < 7 ? 1 : 0)];
     const output = codec.encodeFrames(frames, size);
     assert.equal(output.length, (70 * count - 1) * 3 + 2);
-    assert.ok(output.split('/').every(frame => frame.split('|').length === count && frame.split('|').every(panel => panel.length === 69)));
+    assert.equal(output.split('|').length, count);
+    assert.ok(output.split('|').every(panel => panel.split('/').length === 3 && panel.split('/').every(frame => frame.length === 69)));
     codec.decodeFrames(output, size).forEach((frame, i) => sameBitmap(frame, frames[i]));
     const detected = codec.detectFormat(output);
     assert.equal(detected.panelCount, count);

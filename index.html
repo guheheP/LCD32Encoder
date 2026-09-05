@@ -352,7 +352,7 @@
             <div class="brush-heading"><label for="brushValue">描画する値</label><input id="brushValue" type="number" min="0" max="31" step="1" value="31"><output id="brushDescription" for="brushValue"></output><button id="gradientButton" type="button">32段階を並べる</button></div>
             <div id="colorPalette" class="color-palette" role="group" aria-label="描画する値を選ぶ"></div>
           </div>
-          <p id="colorModeHint" class="field-note">1ドットは0 / 1。従来の69単位 / パネルです。</p>
+          <p id="colorModeHint" class="field-note">1ドットは0 / 1。従来の69単位 / パネル・フレームです。</p>
         </div>
         <div class="editor-toolbar">
           <div class="tool-group" aria-label="グリッド操作">
@@ -397,11 +397,11 @@
             <div id="panelLayout" class="panel-layout" hidden>
               <p id="panelSummary"></p>
               <ol id="panelMap" class="panel-map" aria-label="正面から見たパネル配置と分割後の配列の位置"></ol>
-              <p class="panel-order-note">左上から右へ、次に下の段へ。<code>|</code>で分割して番号順に渡します（配列の位置は番号−1）。</p>
+              <p class="panel-order-note">左上から右へ、次に下の段へ。<code>|</code>で分割すると、各パネルの全フレームをまとめて渡せます。パネル内は<code>/</code>で分割（配列の位置は番号−1）。</p>
             </div>
-            <div class="output-label"><label for="safeOutput">出力文字列</label><span id="frameUnits">69単位 / フレーム</span></div>
+            <div class="output-label"><label for="safeOutput">出力文字列</label><span id="frameUnits">69単位 / パネル・フレーム</span></div>
             <textarea id="safeOutput" spellcheck="false" aria-describedby="outputHint"></textarea>
-            <p id="outputHint" class="output-hint">空白に見える文字も含まれます。</p>
+            <p id="outputHint" class="output-hint">先に | でパネル分割し、各パネル内を / でフレーム分割。空白に見える文字も含まれます。</p>
             <div class="stats"><div class="stat"><strong id="safeLength">0</strong>UTF-16単位</div><div class="stat"><strong id="safeFrameCount">1</strong>フレーム</div></div>
             <div class="output-actions"><button id="safeEncodeButton" class="primary" type="button"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>エンコード</button><button id="safeCopyButton" type="button"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>コピー</button></div>
             <div id="decodeLayoutField" class="field decode-layout-field" hidden><label for="decodeLayout">復元する配置（幅×高さ）</label><select id="decodeLayout" aria-describedby="decodeLayoutHint"><option value="">配置を選択</option></select><p id="decodeLayoutHint" class="field-note">パネル数は自動判定します。並べ方が複数ある場合は選択してください。</p></div>
@@ -434,9 +434,11 @@
           <p>サイズは幅×高さです。「パネルの枚数で指定」で横・縦それぞれ1〜8枚、合計16枚まで配置できます。96×32は横3×縦1枚、96×64は横3×縦2枚です。各パネルは32×32のSafe形式で、回転や反転は行いません。</p>
           <p>ピクセルはパネル内の左上から横方向に並ぶrow-major順です。<code>i = Y × 32 + X</code>。1bitは15ドットずつ格納して69単位。最後は4bitで、残り11bitは0です。5bitは3ドットずつ格納して342単位。最後は1ドットの5bitで、残り10bitは0です。行の途中には0埋めしません。</p>
           <p><code>codeUnit = value + 0x3000</code>。使用範囲は<code>U+3000–U+AFFF</code>で、サロゲートや制御文字を含みません。復号時は<code>ToUTF16(character) - 0x3000</code>で値を戻します。</p>
-          <p>1bitでは各69単位、5bitでは各342単位のパネルを<code>|</code>で区切ります。パネル数をPとすると1フレームは1bitで<code>70 × P − 1</code>、5bitで<code>343 × P − 1</code>単位です（5bitの3枚なら1028単位、4枚なら1371単位）。並び順は左上から右へ、次に下の段へ。未使用bitの0埋めは各パネルごとに入ります。</p>
-          <p>5bitの1文字は<code>p0 + p1 × 32 + p2 × 1024 + 0x3000</code>です。復元はパネルの<code>floor(i / 3)</code>番目の文字から0x3000を引き、<code>(値 &gt;&gt; ((i % 3) × 5)) &amp; 31</code>でドット値を取り出します。1bit / 5bitはパネル長で判定できますが、明度 / カラーの指定は別途共有してください。5bit出力を使うにはResonite側にもこの復号処理が必要です。</p>
-          <p>アニメーションは<code>frame1/frame2/...</code>のように<code>/</code>で区切ります。Resonite側では先に<code>/</code>でフレームを分割し、選んだフレームを<code>|</code>で分割してください。枚数は自動判定できますが、配置は別途指定します。たとえば4枚なら64×64・128×32・32×128が考えられます。全パネルで同じフレーム番号と再生タイミングを使います。以前の区切りなし276単位の文字列は、従来どおり64×64としてデコードできます。</p>
+          <p>1パネル・1フレームは1bitで69単位、5bitで342単位です。各パネルの全フレームを<code>/</code>でつなぎ、そのパネルごとの文字列を<code>|</code>でつなぎます。例：<code>P0F0/P0F1|P1F0/P1F1</code>（P＝パネル、F＝フレーム、0始まり）。パネルの並び順は左上から右へ、次に下の段へです。</p>
+          <p>パネル数P・フレーム数Nに対する総出力長は、1bitで<code>70 × P × N − 1</code>、5bitで<code>343 × P × N − 1</code>単位です。各パネル内の全フレーム数を揃えます。未使用bitの0埋めは各パネルの各フレームごとに入ります。</p>
+          <p>5bitの1文字は<code>p0 + p1 × 32 + p2 × 1024 + 0x3000</code>です。復元はパネルの1フレームから<code>floor(i / 3)</code>番目の文字を取り出して0x3000を引き、<code>(値 &gt;&gt; ((i % 3) × 5)) &amp; 31</code>でドット値を取り出します。1bit / 5bitは1パネル・1フレームの長さで判定できますが、明度 / カラーの指定は別途共有してください。5bit出力を使うにはResonite側にもこの復号処理が必要です。</p>
+          <p>Resonite側では先に<code>|</code>でパネルごとに分割して渡し、各パネルで<code>/</code>によりフレームを分割します。全パネルで同じフレーム番号と再生タイミングを使います。枚数は自動判定できますが、配置は別途指定します。たとえば4枚なら64×64・128×32・32×128が考えられます。</p>
+          <p>以前のフレーム優先形式<code>P0F0|P1F0/P0F1|P1F1</code>も自動判別して復元できます。さらに以前の区切りなし276単位の文字列は64×64として読み込みます。新しいエンコード出力はパネル優先です。1パネルだけ、または1フレームだけなら新旧の文字列は同じです。</p>
           <p>サイズ変更は全フレームに適用し、既存の絵を左上に保持します。範囲外の絵が切れる場合は確認が表示されます。サンプルと文字は縦横比を保って中央に配置します。</p>
           <p>長さは見た目の文字数ではなく、JavaScriptの<code>String.length</code>で数えます。文字アニメーションの入力はUnicode文字単位で扱います。</p>
         </div>
@@ -572,60 +574,71 @@
       }
 
       function encodeFrames(frames, size, bits = 1) {
-        panelCount(size);
+        const count = panelCount(size);
         chunkCount(bits);
         if (!frames.length) throw new Error("フレームがありません。");
-        return frames.map((frame) => {
+        const encodedFrames = frames.map(frame => {
           validatePixels(frame, bits);
-          return splitPanels(frame, size).map(panel => safePixelsToString(panel, bits)).join("|");
-        }).join("/");
+          return splitPanels(frame, size).map(panel => safePixelsToString(panel, bits));
+        });
+        return Array.from({ length: count }, (_, panel) => encodedFrames.map(frame => frame[panel]).join("/")).join("|");
       }
 
-      function parseFrameStrings(value) {
+      function parseOutput(value) {
         if (!value.length) throw new Error("Safe出力が空です。");
-        let count, bits;
-        return value.split("/").map((frame, frameIndex) => {
-          let panelStrings = frame.split("|");
-          // Keep previously generated 64×64 strings readable; new output always uses |.
-          if (!frame.includes("|") && frame.length === SAFE_CHUNK_COUNT * 4) {
-            panelStrings = Array.from({ length: 4 }, (_, panel) => frame.slice(panel * SAFE_CHUNK_COUNT, (panel + 1) * SAFE_CHUNK_COUNT));
-          }
-          if (!layoutsForPanelCount(panelStrings.length).length) throw new Error(`${frameIndex + 1}フレーム目: ${panelStrings.length}枚を配置できません。横・縦は各8枚、合計16枚までです。パネル間の「|」を確認してください。`);
-          if (count !== undefined && panelStrings.length !== count) throw new Error(`${frameIndex + 1}フレーム目: フレーム間でパネル数が異なります。`);
-          count = panelStrings.length;
-          panelStrings.forEach((panelString, panel) => {
+        const firstFrame = value.split("/", 1)[0];
+        const legacy64 = !value.includes("|") && firstFrame.length === SAFE_CHUNK_COUNT * 4;
+        // With both axes present, the first separator identifies the inner axis.
+        const frameMajor = legacy64 || (value.includes("|") && value.includes("/") && value.indexOf("|") < value.indexOf("/"));
+        let panelFrames;
+        if (frameMajor) {
+          const framePanels = value.split("/").map(frame => legacy64
+            ? Array.from({ length: 4 }, (_, panel) => frame.slice(panel * SAFE_CHUNK_COUNT, (panel + 1) * SAFE_CHUNK_COUNT))
+            : frame.split("|"));
+          if (legacy64 && value.split("/").some(frame => frame.length !== SAFE_CHUNK_COUNT * 4)) throw new Error("旧64×64形式は1フレーム276 UTF-16単位必要です。");
+          const count = framePanels[0].length;
+          if (framePanels.some(frame => frame.length !== count)) throw new Error("旧形式のフレーム間でパネル数が異なります。");
+          panelFrames = Array.from({ length: count }, (_, panel) => framePanels.map(frame => frame[panel]));
+        } else {
+          panelFrames = value.split("|").map(panel => panel.split("/"));
+        }
+        if (!layoutsForPanelCount(panelFrames.length).length) throw new Error(`${panelFrames.length}枚を配置できません。横・縦は各8枚、合計16枚までです。パネル間の「|」を確認してください。`);
+        const frameCount = panelFrames[0].length;
+        let bits;
+        panelFrames.forEach((frames, panel) => {
+          if (frames.length !== frameCount) throw new Error(`パネル${panel}: パネル間でフレーム数が異なります（${frameCount}に対し${frames.length}）。`);
+          frames.forEach((frame, frameIndex) => {
             try {
-              const panelBits = bitsFromLength(panelString.length);
-              if (bits !== undefined && panelBits !== bits) throw new Error("1bitと5bitのパネル・フレームは混在できません。");
-              bits = panelBits;
+              const frameBits = bitsFromLength(frame.length);
+              if (bits !== undefined && frameBits !== bits) throw new Error("1bitと5bitのパネル・フレームは混在できません。");
+              bits = frameBits;
             } catch (error) {
-              throw new Error(`${frameIndex + 1}フレーム目・パネル${panel + 1}: ${error.message}`);
+              throw new Error(`パネル${panel}・フレーム${frameIndex}: ${error.message}`);
             }
           });
-          return panelStrings;
         });
+        return { panelFrames, bits, order: legacy64 ? "legacy64" : frameMajor ? "frame-major" : "panel-major" };
       }
 
       function detectFormat(value) {
-        const parsed = parseFrameStrings(value);
-        const count = parsed[0].length;
-        const legacy = count === 4 && !value.includes("|");
-        const layouts = legacy ? [dimensions(64)] : layoutsForPanelCount(count);
-        const bits = bitsFromLength(parsed[0][0].length);
-        return { panelCount: count, frameCount: parsed.length, bits, chunkCount: chunkCount(bits), layouts, size: layouts.length === 1 ? layouts[0] : null };
+        const { panelFrames, bits, order } = parseOutput(value);
+        const count = panelFrames.length;
+        const layouts = order === "legacy64" ? [dimensions(64)] : layoutsForPanelCount(count);
+        return { panelCount: count, frameCount: panelFrames[0].length, bits, order, chunkCount: chunkCount(bits), layouts, size: layouts.length === 1 ? layouts[0] : null };
       }
 
       function decodeFrames(value, size, bits) {
         const count = panelCount(size);
         if (bits !== undefined) chunkCount(bits);
         const { width, height } = dimensions(size);
-        return parseFrameStrings(value).map((panelStrings, frameIndex) => {
-          if (panelStrings.length !== count) throw new Error(`${frameIndex + 1}フレーム目: ${width}×${height}は${count}枚のパネルが必要です（入力は${panelStrings.length}枚）。`);
-          const panels = panelStrings.map((panelString, panel) => {
+        const { panelFrames } = parseOutput(value);
+        if (panelFrames.length !== count) throw new Error(`${width}×${height}は${count}枚のパネルが必要です（入力は${panelFrames.length}枚）。`);
+        return Array.from({ length: panelFrames[0].length }, (_, frameIndex) => {
+          const panels = panelFrames.map((frames, panel) => {
             try {
-              return safeStringToPixels(panelString, bits);
+              return safeStringToPixels(frames[frameIndex], bits);
             } catch (error) {
-              throw new Error(`${frameIndex + 1}フレーム目・パネル${panel + 1}: ${error.message}`);
+              throw new Error(`パネル${panel}・フレーム${frameIndex}: ${error.message}`);
             }
           });
           return joinPanels(panels, size);
@@ -651,7 +664,7 @@
         return scaled;
       }
 
-      return Object.freeze({ PANEL_SIZE, PANEL_PIXEL_COUNT, SAFE_BITS, SAFE_CHUNK_COUNT, SAFE_OFFSET, SAFE_MAX_CODE_UNIT, MAX_PANEL_AXIS, MAX_PANELS, dimensions, panelCount, layoutsForPanelCount, chunkCount, safePixelsToString, safeStringToPixels, splitPanels, joinPanels, encodeFrames, decodeFrames, detectFormat, resizeBitmap, scaleBitmap });
+      return Object.freeze({ PANEL_SIZE, PANEL_PIXEL_COUNT, SAFE_BITS, SAFE_CHUNK_COUNT, SAFE_OFFSET, SAFE_MAX_CODE_UNIT, MAX_PANEL_AXIS, MAX_PANELS, dimensions, panelCount, layoutsForPanelCount, chunkCount, safePixelsToString, safeStringToPixels, splitPanels, joinPanels, encodeFrames, decodeFrames, parseOutput, detectFormat, resizeBitmap, scaleBitmap });
     })();
   </script>
   <script id="lcd-colors">
@@ -814,7 +827,7 @@
       let pixels = frames[currentFrame];
       let decodedFrames = [];
       let decodedSize = canvasSize();
-      let safeListFrames = [];
+      let safeListPanels = [];
       let isPlaying = false;
       let playTimer = null;
       let isPainting = false;
@@ -852,7 +865,7 @@
         $("thresholdField").hidden = multi;
         $("imageColorHint").hidden = !multi;
         $("imageColorHint").textContent = pixelMode === "gray32" ? "画像の明るさを0〜31へ変換します。透明部分は黒に合成します。" : "画像を固定32色に減色します。透明部分は黒に合成します。";
-        $("colorModeHint").textContent = !multi ? "1ドットは0 / 1。従来の69単位 / パネルです。" : `${pixelMode === "gray32" ? "0＝黒、31＝白。" : "R:2bit・G:2bit・B:1bitの固定32色。"}342単位 / パネル。明度とカラーの切替は値を保持します。`;
+        $("colorModeHint").textContent = !multi ? "1ドットは0 / 1。従来の69単位 / パネル・フレームです。" : `${pixelMode === "gray32" ? "0＝黒、31＝白。" : "R:2bit・G:2bit・B:1bitの固定32色。"}342単位 / パネル・フレーム。明度とカラーの切替は値を保持します。`;
         $("gridHint").textContent = multi ? "選んだ値で描画 · Shiftで消去" : "クリック・ドラッグで描画";
         $("pixelLegend").hidden = multi;
         $("fillButton").title = multi ? "現在のフレームを選んだ値で塗る" : "現在のフレームをすべてONにする";
@@ -929,11 +942,15 @@
         Array.from($("gridRuler").children).forEach((span, index) => { span.textContent = String(positions[index]); });
       }
 
+      function updateOutputHint(order = "panel-major") {
+        $("outputHint").textContent = (order === "frame-major" ? "旧形式：先に / でフレーム分割し、| でパネル分割。" : order === "legacy64" ? "旧64×64形式：/ で分割後、69単位ずつ4枚に分割。" : "先に | でパネル分割し、各パネル内を / でフレーム分割。") + "空白に見える文字も含まれます。";
+      }
+
       function updateOutputFormat(size, bits = bitDepth()) {
         const count = LCDCodec.panelCount(size);
-        $("frameUnits").textContent = `${LCDCodec.chunkCount(bits) * count + count - 1}単位 / フレーム`;
+        $("frameUnits").textContent = `${LCDCodec.chunkCount(bits)}単位 / パネル・フレーム`;
         $("panelLayout").hidden = count === 1;
-        $("panelSummary").textContent = `${sizeLabel(size)}・${count}枚を1本に（各${LCDCodec.chunkCount(bits)}単位・${bits}bit）`;
+        $("panelSummary").textContent = `${sizeLabel(size)}・${count}枚を1本に（各フレーム${LCDCodec.chunkCount(bits)}単位・${bits}bit）`;
         const columns = size.width / PANEL_SIZE;
         const map = $("panelMap");
         map.style.gridTemplateColumns = `repeat(${size.width / PANEL_SIZE}, 1fr)`;
@@ -1177,22 +1194,23 @@
           : `編集中の画像と不一致（${result.matching.toLocaleString()} / ${result.total.toLocaleString()}ドット一致）`;
       }
 
-      function renderSafeList(frameStrings, bits = bitDepth()) {
+      function renderSafeList(panelFrames, bits = bitDepth()) {
         safeListChunks = LCDCodec.chunkCount(bits);
-        safeListFrames = frameStrings;
+        safeListPanels = panelFrames;
         $("safeList").replaceChildren();
         renderSafeListFrame();
       }
 
       function renderSafeListFrame() {
-        if (!$("codeDetails").open || !safeListFrames.length) return;
+        if (!$("codeDetails").open || !safeListPanels.length) return;
         const list = $("safeList");
         list.replaceChildren();
-        const frameIndex = Math.min(currentFrame, safeListFrames.length - 1);
+        const frameCount = safeListPanels[0].length;
+        const frameIndex = Math.min(currentFrame, frameCount - 1);
         const heading = document.createElement("div");
-        heading.textContent = `フレーム ${frameIndex + 1} / ${safeListFrames.length}`;
+        heading.textContent = `フレーム ${frameIndex + 1} / ${frameCount}`;
         list.appendChild(heading);
-        const data = safeListFrames[frameIndex].replaceAll("|", "");
+        const data = safeListPanels.map(panel => panel[frameIndex]).join("");
         for (let index = 0; index < data.length; index += 1) {
           const row = document.createElement("div");
           const codeUnit = data.charCodeAt(index);
@@ -1203,7 +1221,8 @@
 
       function encodeSafe() {
         const encoded = safeFramesToString(frames);
-        const frameStrings = encoded.split("/");
+        const { panelFrames } = LCDCodec.parseOutput(encoded);
+        updateOutputHint();
         safeOutput.value = encoded;
         updateOutputFormat(canvasSize());
         populateDecodeLayouts(LCDCodec.detectFormat(encoded), sizeKey(canvasSize()));
@@ -1212,7 +1231,7 @@
         if (bitDepth() === 5) $("decodeMode").value = pixelMode;
         $("safeLength").textContent = String(encoded.length);
         $("safeFrameCount").textContent = String(frames.length);
-        renderSafeList(frameStrings);
+        renderSafeList(panelFrames);
 
         const decoded = safeStringToFrames(encoded);
         renderDecoded(decoded);
@@ -1223,16 +1242,17 @@
 
       function decodeSafeFromInput() {
         try {
-          const frameStrings = safeOutput.value.split("/");
+          const { panelFrames } = LCDCodec.parseOutput(safeOutput.value);
           const format = LCDCodec.detectFormat(safeOutput.value);
           populateDecodeLayouts(format);
+          updateOutputHint(format.order);
           $("decodeModeField").hidden = format.bits === 1;
           if (!format.size && !$("decodeLayout").value) {
             clearDecodedPreview();
             $("safeVerification").className = "verification stale";
             $("safeVerification").textContent = `${format.panelCount}枚のパネルを検出しました。復元する配置を選んでください。`;
             $("panelLayout").hidden = true;
-            $("frameUnits").textContent = `${format.panelCount * (format.chunkCount + 1) - 1}単位 / フレーム`;
+            $("frameUnits").textContent = `${format.chunkCount}単位 / パネル・フレーム`;
             $("safeCopyButton").disabled = true;
             $("outputFeedback").textContent = "";
             return;
@@ -1242,7 +1262,7 @@
           const mode = format.bits === 1 ? "mono" : $("decodeMode").value;
           renderDecoded(decoded, size, mode);
           updateOutputFormat(size, format.bits);
-          renderSafeList(frameStrings, format.bits);
+          renderSafeList(panelFrames, format.bits);
           $("safeLength").textContent = String(safeOutput.value.length);
           $("safeFrameCount").textContent = String(decoded.length);
           if (sizeKey(size) === sizeKey(canvasSize()) && mode === pixelMode) {
@@ -1252,7 +1272,7 @@
             $("safeVerification").textContent = `${sizeLabel(size)}・${modeLabel(mode)}として復元しました。編集キャンバスとサイズまたは表示方法が異なります。`;
           }
           $("safeCopyButton").disabled = false;
-          $("outputFeedback").textContent = `${format.bits}bit・${format.panelCount}枚 × ${decoded.length}フレームを検出・復元しました。`;
+          $("outputFeedback").textContent = `${format.order === "panel-major" ? "パネル優先" : format.order === "frame-major" ? "旧形式・フレーム優先" : "旧64×64形式"}：${format.bits}bit・${format.panelCount}枚 × ${decoded.length}フレームを復元しました。`;
         } catch (error) {
           clearDecodedPreview();
           $("safeVerification").className = "verification bad";
@@ -1264,7 +1284,7 @@
 
       function clearDecodedPreview() {
         decodedFrames = [];
-        safeListFrames = [];
+        safeListPanels = [];
         decodedContext.clearRect(0, 0, decodedPreview.width, decodedPreview.height);
         $("decodedLabel").textContent = "復元待ち";
         $("safeList").replaceChildren();
@@ -1274,10 +1294,13 @@
         try {
           const format = LCDCodec.detectFormat(safeOutput.value);
           populateDecodeLayouts(format);
+          updateOutputHint(format.order);
           $("decodeModeField").hidden = format.bits === 1;
+          return format;
         } catch (_) {
           $("decodeModeField").hidden = true;
           $("decodeLayoutField").hidden = true;
+          return null;
         }
       }
 
@@ -1957,9 +1980,9 @@
       $("safeCopyButton").addEventListener("click", () => copyValue(safeOutput.value, "コピーしました。Resoniteに貼り付けできます。"));
       safeOutput.addEventListener("input", () => {
         clearDecodedPreview();
-        updateDecodeLayoutField();
+        const format = updateDecodeLayoutField();
         $("safeLength").textContent = String(safeOutput.value.length);
-        $("safeFrameCount").textContent = safeOutput.value.length ? String(safeOutput.value.split("/").length) : "0";
+        $("safeFrameCount").textContent = format ? String(format.frameCount) : safeOutput.value.length ? "—" : "0";
         $("safeVerification").className = "verification stale";
         $("safeVerification").textContent = "文字列が変更されました。「デコード」で内容を確認してください。";
         $("safeCopyButton").disabled = true;

@@ -34,9 +34,10 @@ for (const [width, height] of [[32,32], [32,64], [64,32], [64,64], [96,32], [96,
       Uint8Array.from({ length: width * height }, (_, i) => (i % width * 7 + Math.floor(i / width) * 13) % 32)];
     const encoded = codec.encodeFrames(frames, size, 5);
     assert.equal(encoded.length, (343 * count - 1) * 3 + 2);
-    for (const frame of encoded.split('/')) {
-      assert.equal(frame.split('|').length, count);
-      for (const panel of frame.split('|')) assert.equal(panel.length, 342);
+    assert.equal(encoded.split('|').length, count);
+    for (const panel of encoded.split('|')) {
+      assert.equal(panel.split('/').length, 3);
+      for (const frame of panel.split('/')) assert.equal(frame.length, 342);
     }
     const format = codec.detectFormat(encoded);
     assert.equal(format.bits, 5);
