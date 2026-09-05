@@ -332,11 +332,42 @@
               <button type="button" data-portrait="basketball">バスケットボール</button>
               <button type="button" data-portrait="astronaut">宇宙遊泳</button>
               <button type="button" data-portrait="flower">花が咲く</button>
-              <button type="button" data-portrait="reel">リール回転</button>
-              <button type="button" data-portrait="jackpot">7でストップ</button>
               <button type="button" data-portrait="coins">コインシャワー</button>
               <button type="button" data-portrait="countdown">カウントダウン</button>
             </div>
+            <details class="sample-animation-block"><summary>動物・図形の通過 <span aria-hidden="true">＋</span></summary>
+              <div class="field"><label for="portraitDirection">通過する向き</label><select id="portraitDirection"><option value="left">右 → 左</option><option value="right">左 → 右</option></select></div>
+              <div class="pattern-grid">
+                <button type="button" data-portrait="cat">走るネコ</button>
+                <button type="button" data-portrait="rabbit">跳ねるウサギ</button>
+                <button type="button" data-portrait="bird">羽ばたく鳥</button>
+                <button type="button" data-portrait="fish">泳ぐ魚</button>
+                <button type="button" data-portrait="stars">星の行進</button>
+                <button type="button" data-portrait="hearts">ハートの行進</button>
+              </div>
+            </details>
+            <details class="sample-animation-block"><summary>光・空間の演出 <span aria-hidden="true">＋</span></summary>
+              <div class="pattern-grid">
+                <button type="button" data-portrait="warp">スター・ワープ</button>
+                <button type="button" data-portrait="tunnel">光のトンネル</button>
+                <button type="button" data-portrait="meteor">流星群</button>
+                <button type="button" data-portrait="burst">放射光</button>
+                <button type="button" data-portrait="ripple">波紋</button>
+                <button type="button" data-portrait="spiral">光のらせん</button>
+                <button type="button" data-portrait="vortex">渦巻き</button>
+              </div>
+            </details>
+            <details class="sample-animation-block"><summary>背景・画面切替 <span aria-hidden="true">＋</span></summary>
+              <div class="pattern-grid">
+                <button type="button" data-portrait="curtain">カーテン開閉</button>
+                <button type="button" data-portrait="checkerwipe">市松ワイプ</button>
+                <button type="button" data-portrait="dissolve">粒でフェード</button>
+                <button type="button" data-portrait="rain">雨としずく</button>
+                <button type="button" data-portrait="snow">舞う雪</button>
+                <button type="button" data-portrait="bubbles">浮かぶ泡</button>
+                <button type="button" data-portrait="flame">ゆらめく炎</button>
+              </div>
+            </details>
             <p class="field-note">縦2枚（32×64）に切り替え、全フレームを置き換えます。単色で上下いっぱいに動きます。再生ボタンで確認できます。</p>
           </div>
           <div class="sample-animation-block">
@@ -827,12 +858,30 @@
         basketball: { label: "バスケットボール", count: 64, delay: 80 },
         astronaut: { label: "宇宙遊泳", count: 40, delay: 110 },
         flower: { label: "花が咲く", count: 48, delay: 110 },
-        reel: { label: "リール回転", count: 36, delay: 70 },
-        jackpot: { label: "7でストップ", count: 64, delay: 80 },
         coins: { label: "コインシャワー", count: 40, delay: 80 },
-        countdown: { label: "カウントダウン", count: 48, delay: 80 }
+        countdown: { label: "カウントダウン", count: 48, delay: 80 },
+        cat: { label: "走るネコ", count: 48, delay: 80, effect: "pass" },
+        rabbit: { label: "跳ねるウサギ", count: 48, delay: 80, effect: "pass" },
+        bird: { label: "羽ばたく鳥", count: 48, delay: 80, effect: "pass" },
+        fish: { label: "泳ぐ魚", count: 48, delay: 80, effect: "pass" },
+        stars: { label: "星の行進", count: 48, delay: 80, effect: "pass" },
+        hearts: { label: "ハートの行進", count: 48, delay: 80, effect: "pass" },
+        warp: { label: "スター・ワープ", count: 48, delay: 80, effect: "warp" },
+        tunnel: { label: "光のトンネル", count: 48, delay: 80, effect: "tunnel" },
+        meteor: { label: "流星群", count: 48, delay: 80, effect: "meteor" },
+        burst: { label: "放射光", count: 48, delay: 80, effect: "burst" },
+        ripple: { label: "波紋", count: 48, delay: 80, effect: "ripple" },
+        spiral: { label: "光のらせん", count: 48, delay: 80, effect: "spiral" },
+        vortex: { label: "渦巻き", count: 48, delay: 80, effect: "vortex" },
+        curtain: { label: "カーテン開閉", count: 48, delay: 80, effect: "curtain" },
+        checkerwipe: { label: "市松ワイプ", count: 48, delay: 80, effect: "checkerwipe" },
+        dissolve: { label: "粒でフェード", count: 48, delay: 80, effect: "dissolve" },
+        rain: { label: "雨としずく", count: 48, delay: 80, effect: "rain" },
+        snow: { label: "舞う雪", count: 48, delay: 80, effect: "snow" },
+        bubbles: { label: "浮かぶ泡", count: 48, delay: 80, effect: "bubbles" },
+        flame: { label: "ゆらめく炎", count: 48, delay: 80, effect: "flame" }
       };
-      function build(name) {
+      function build(name, { direction = "left" } = {}) {
         const preset = presets[name];
         if (!preset) throw new Error("不明な縦画面プリセットです。");
         return Array.from({ length: preset.count }, (_, i) => {
@@ -1134,7 +1183,7 @@
             line(9,55,23,55); for(let xx=11;xx<=21;xx++) dot(xx,57,0);
             // A small drifting mote follows a closed path above the blossom.
             star(16+Math.sin(a)*9,5+Math.cos(a)*2,1);
-          } else if (name === "reel" || name === "jackpot" || name === "countdown") {
+          } else if (name === "countdown") {
             const glyphs={
               '7':['11111','10001','00010','00100','00100','00100','00100'],
               '3':['11110','00001','00001','01110','00001','00001','11110'],
@@ -1142,11 +1191,6 @@
               '1':['00100','01100','00100','00100','00100','00100','01110'],
               G:['01110','10001','10000','10111','10001','10001','01110'],
               O:['01110','10001','10001','10001','10001','10001','01110'],
-              W:['10001','10001','10001','10101','10101','11011','10001'],
-              I:['11111','00100','00100','00100','00100','00100','11111'],
-              N:['10001','11001','11001','10101','10011','10011','10001'],
-              bell:['00100','01110','01110','01110','11111','00000','00100'],
-              cherry:['00011','00110','01010','01010','11011','11011','00000']
             };
             const glyph=(key,left,top,scale=1,clipTop=0,clipBottom=63)=>{
               glyphs[key].forEach((row,y)=>Array.from(row).forEach((v,x)=>{
@@ -1170,32 +1214,6 @@
                 dot(16+14*Math.cos(angle),33+24*Math.sin(angle));
               }
               if(stage===3) { star(4,13,2); star(27,52,2); }
-            } else {
-              const stopped=name==='jackpot' && i>=40;
-              const offset=name==='reel' ? Math.floor(t*72) : Math.round(216*(1-(1-Math.min(1,i/40))**3));
-              // Three repeating symbols scroll inside a fixed reel window.
-              for(let y=0;y<=63;y+=4) {
-                dot(2,y,((Math.floor(y/4)+Math.floor(i/3))%3)===0 ? 1 : 0);
-                dot(29,y,((Math.floor(y/4)-Math.floor(i/3)+24)%3)===0 ? 1 : 0);
-              }
-              line(5,16,26,16); line(5,47,26,47);
-              line(5,16,5,47); line(26,16,26,47);
-              for(let row=0;row<13;row++) {
-                const top=25+row*24-offset;
-                if(top>46 || top+13<17) continue;
-                glyph(['7','bell','cherry'][row%3],11,top,2,17,46);
-              }
-              // Payline pointers remain outside the moving artwork.
-              line(1,30,3,32); line(3,32,1,34);
-              line(30,30,28,32); line(28,32,30,34);
-              if(stopped) {
-                word('WIN',5);
-                const radius=1+Math.floor(i/3)%2;
-                star(8,55,radius); star(24,55,radius); star(16,59,1);
-              } else {
-                line(11,7,20,7); line(11,10,20,10);
-                glyph('7',14,53);
-              }
             }
           } else if (name === "coins") {
             // Edge-on and face-on coins fall at staggered positions in a seamless loop.
@@ -1213,6 +1231,125 @@
             for(let k=0;k<4;k++) {
               const x=4+k*8, y=8+k*15;
               if((i+k*4)%16<4) star(x,y,1);
+            }
+          } else if (preset.effect) {
+            const ring=(cx,cy,rx,ry,phase=0)=>{
+              let previous;
+              for(let k=0;k<=100;k++) {
+                const theta=k*Math.PI/50+phase, point=[cx+rx*Math.cos(theta),cy+ry*Math.sin(theta)];
+                if(previous) line(...previous,...point);
+                previous=point;
+              }
+            };
+            // Fixed per-particle seeds keep every export deterministic.
+            const seed=k=>((k*73+19)%101)/101;
+            if(preset.effect==='pass') {
+              const sprites={
+                cat:['0100010000000000','0111110000000000','0111010000000001','0111111111100011','0011111111110110','0001111111111100','0001111111111000','0001100000110000'],
+                rabbit:['0010010000000000','0010010000000000','0011010000000000','0111110000000000','0111010000000000','0111110111110000','0011111111111000','0001111111111100','0001111111111100','0000111111111000'],
+                bird:['0000000000000000','0011100000000000','1111011110000000','0011111111110000','0001111111111100','0000111111111111','0000011111100000'],
+                fish:['0000001100000000','0000111110000001','0011111111100011','0111011111110111','1111111111111111','0111111111110111','0011111111100011','0000111110000001','0000001100000000'],
+                stars:['00000100000','00001110000','00001110000','11111111111','01111111110','00111111100','00111111100','00111011100','01110001110','01100000110'],
+                hearts:['01110011100','11111111110','11111111110','11111111110','01111111100','00111111000','00011110000','00001100000']
+              };
+              const sprite=sprites[name], width=sprite[0].length;
+              const origin=32-Math.round(t*(32+width+((name==='stars' || name==='hearts') ? 18 : 4)));
+              const px=(x,y,value=1)=>dot(direction==='right' ? 31-Math.round(x) : Math.round(x),y,value);
+              const bob=name==='rabbit' ? -Math.abs(Math.sin(a*3))*5 : Math.sin(a*2)*2;
+              const top=27+bob;
+              sprite.forEach((row,y)=>Array.from(row).forEach((v,x)=>{if(v==='1') px(origin+x,top+y);}));
+              if(name==='cat' || name==='rabbit') {
+                const stride=Math.round(Math.sin(a*4)*2);
+                for(let k=0;k<4;k++) {
+                  px(origin+4+stride,top+sprite.length+k);
+                  px(origin+11-stride,top+sprite.length+k);
+                }
+              }
+              if(name==='bird') {
+                const wing=Math.sin(a*4)*7;
+                for(let k=0;k<7;k++) for(let q=0;q<3;q++) px(origin+7+k/2+q,top+3+wing*k/7);
+              }
+              if(name==='fish') for(let k=0;k<3;k++) px(origin-4-k*3,top+2+Math.sin(a*3+k)*2);
+              if(name==='stars' || name==='hearts') {
+                // A smaller companion crosses the other panel on the same beat.
+                sprite.forEach((row,y)=>Array.from(row).forEach((v,x)=>{
+                  if(v==='1') px(origin+10+x*.65,top+20+y*.65);
+                }));
+                for(let k=0;k<6;k++) px(origin+width+3+k*2,top+5+Math.sin(a+k)*3);
+              }
+            } else if(name==='warp') {
+              for(let k=0;k<30;k++) {
+                const q=(t+seed(k))%1, theta=k*2.399;
+                const radius=2+q*q*44, tail=Math.max(1,radius-q*8);
+                line(16+Math.cos(theta)*tail,32+Math.sin(theta)*tail*1.8,
+                     16+Math.cos(theta)*radius,32+Math.sin(theta)*radius*1.8);
+              }
+            } else if(name==='tunnel') {
+              for(let k=0;k<7;k++) {
+                const q=(t+k/7)%1, r=1+q*q*30;
+                const cx=16+Math.sin(a)*3*q, cy=32+Math.cos(a)*4*q;
+                line(cx-r,cy-r*1.6,cx+r,cy-r*1.6); line(cx+r,cy-r*1.6,cx+r,cy+r*1.6);
+                line(cx+r,cy+r*1.6,cx-r,cy+r*1.6); line(cx-r,cy+r*1.6,cx-r,cy-r*1.6);
+              }
+            } else if(name==='meteor') {
+              for(let k=0;k<9;k++) {
+                const q=(t+seed(k))%1, x=38-q*49, y=-12+q*90+(k%3-1)*12;
+                line(x,y,x+5,y-9); disk(x,y,1); dot(x+7,y-12);
+              }
+            } else if(name==='burst') {
+              for(let k=0;k<18;k++) {
+                const theta=k*Math.PI/9+a*.5, inner=3+Math.sin(a*3+k)*2;
+                line(16+Math.cos(theta)*inner,32+Math.sin(theta)*inner,
+                     16+Math.cos(theta)*40,32+Math.sin(theta)*64);
+              }
+              disk(16,32,2);
+            } else if(name==='ripple') {
+              for(let k=0;k<4;k++) {const r=((t+k/4)%1)*43;ring(16,32,r,r*.75);}
+            } else if(name==='spiral') {
+              for(let k=0;k<64;k++) {
+                const yy=k, theta=a*2+k*.23;
+                dot(16+Math.sin(theta)*11,yy); dot(16-Math.sin(theta)*11,yy);
+                if(k%6===0) line(16+Math.sin(theta)*11,yy,16-Math.sin(theta)*11,yy);
+              }
+            } else if(name==='vortex') {
+              for(let arm=0;arm<3;arm++) for(let k=0;k<90;k++) {
+                const r=k*.3, theta=a+arm*Math.PI*2/3+k*.10;
+                dot(16+Math.cos(theta)*r,32+Math.sin(theta)*r*1.6);
+              }
+            } else if(name==='curtain') {
+              const opening=(1-Math.cos(a))/2*16;
+              for(let y=0;y<64;y++) for(let x=0;x<32;x++)
+                if((x<16-opening || x>15+opening) && (x+Math.round(Math.sin(a+y*.1)))%4!==0) dot(x,y);
+            } else if(name==='checkerwipe') {
+              const edge=(1-Math.cos(a))/2*90-13;
+              for(let y=0;y<64;y++) for(let x=0;x<32;x++)
+                if(y+(Math.floor(x/4)%2)*10<edge && (Math.floor(x/4)+Math.floor(y/4))%2===0) dot(x,y);
+            } else if(name==='dissolve') {
+              const threshold=(1-Math.cos(a))/2;
+              for(let y=0;y<64;y++) for(let x=0;x<32;x++)
+                if(((x*37+y*71+x*y*13)%997)/997<threshold) dot(x,y);
+            } else if(name==='rain') {
+              for(let k=0;k<20;k++) {
+                const y=(t*64+seed(k)*64)%64, x=2+(k*11)%28;
+                if(y<55) line(x,y,x-1,y+4);
+                else {const r=(y-55)/2; line(x-r,59,x-1,58);line(x+1,58,x+r,59);}
+              }
+              line(0,62,31,62);
+            } else if(name==='snow') {
+              for(let k=0;k<24;k++) {
+                const y=(t*64+seed(k)*64)%64, x=3+(k*17)%26+Math.sin(a+k)*2;
+                if(k%4===0) star(x,y,1); else dot(x,y);
+              }
+            } else if(name==='bubbles') {
+              for(let k=0;k<10;k++) {
+                const y=68-((t*80+seed(k)*80)%80), x=5+(k*11)%22+Math.sin(a+k)*2;
+                const r=2+k%3;ring(x,y,r,r);dot(x-1,y-1);
+              }
+            } else if(name==='flame') {
+              for(let y=0;y<64;y++) for(let x=0;x<32;x++) {
+                const height=18+20*Math.abs(Math.sin(x*.19+a))+12*Math.sin(x*.47-a*2);
+                if(y>64-height && x>1 && x<30 && !(y>55 && (x+y)%7===0)) dot(x,y);
+              }
             }
           } else if (name === "fireworks") {
             const burst=14;
@@ -2064,7 +2201,7 @@
 
       function applyPortraitPreset(name) {
         const preset = LCDPortraitPresets.presets[name];
-        const nextFrames = LCDPortraitPresets.build(name).map(frame => Uint8Array.from(frame, value => value ? inkValue() : 0));
+        const nextFrames = LCDPortraitPresets.build(name, { direction: $("portraitDirection").value }).map(frame => Uint8Array.from(frame, value => value ? inkValue() : 0));
         stopPlayback();
         isPainting = false;
         lastPaintIndex = null;
