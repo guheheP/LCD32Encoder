@@ -1618,6 +1618,7 @@
         const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d", { willReadFrequently: true });
         const lines = text.split("\n");
+        const stackedCharacters = lines.length > 1 && lines.every(line => Array.from(line).length === 1);
         const horizontalScroll = ["scroll-left", "scroll-right"].includes(effect);
         const verticalScroll = ["scroll-up", "scroll-down"].includes(effect);
         const automatic = $("textFontSize").value === "auto";
@@ -1630,8 +1631,13 @@
           ascent = Math.ceil(Math.max(fontSize * .8, ...metrics.map(m => m.actualBoundingBoxAscent)));
           const descent = Math.ceil(Math.max(fontSize * .2, ...metrics.map(m => m.actualBoundingBoxDescent)));
           lineHeight = ascent + descent + 1;
+          if (stackedCharacters) {
+            const glyphHeight = Math.ceil(Math.max(...metrics.map(m => m.actualBoundingBoxAscent))) + Math.ceil(Math.max(...metrics.map(m => m.actualBoundingBoxDescent)));
+            lineHeight = Math.max(glyphHeight + 1, lineHeight - Math.max(1, Math.round(fontSize * .15)));
+          }
           width = Math.max(1, Math.ceil(Math.max(...metrics.map(m => Math.max(m.width, m.actualBoundingBoxLeft + m.actualBoundingBoxRight))))) + 2;
-          height = lineHeight * lines.length + 1;
+          // Keep the last glyph's full height even when the baseline spacing is reduced.
+          height = lineHeight * (lines.length - 1) + ascent + descent + 2;
         };
         measure();
         const fits = () => (horizontalScroll || width <= WIDTH) && (verticalScroll || height <= HEIGHT);
