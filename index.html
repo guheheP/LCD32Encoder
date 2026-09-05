@@ -812,7 +812,7 @@
     const LCDPortraitPresets = (() => {
       const presets = {
         dance: { label: "ダンス", count: 32, delay: 90 },
-        breakdance: { label: "ブレイクダンス", count: 48, delay: 90 },
+        breakdance: { label: "ブレイクダンス", count: 80, delay: 90 },
         rope: { label: "なわとび", count: 20, delay: 80 },
         rocket: { label: "ロケット上昇", count: 32, delay: 90 },
         jellyfish: { label: "泳ぐクラゲ", count: 32, delay: 110 },
@@ -938,9 +938,35 @@
               [13,35,17,45, 6,43,7,52, 23,40,27,47, 10,51,7,58, 24,51,26,58],
               [14,28,17,41, 6,33,10,37, 24,30,27,26, 10,48,7,58, 23,49,26,58]
             ];
-            const phase=t*poses.length, n=Math.floor(phase), f=phase-n;
+            const spinning=i>=16 && i<48;
+            const phase=(i<16 ? i : i>=48 ? i-32 : 16)/4;
+            const n=Math.floor(phase), f=phase-n;
             const blend=f*f*(3-2*f);
-            const pose=poses[n].map((v,k)=>v+(poses[(n+1)%poses.length][k]-v)*blend);
+            let pose=poses[n].map((v,k)=>v+(poses[(n+1)%poses.length][k]-v)*blend);
+            if(spinning) {
+              // Two full turns about the head: project width and depth so the legs
+              // cross in profile, then open again, rather than flipping the bitmap.
+              const spinPose=[16,45,16,32, 7,47,5,55, 25,47,27,55, 8,23,4,13, 24,23,28,13];
+              const step=i-16;
+              if(step<4 || step>=28) {
+                const q=step<4 ? step/4 : (32-step)/4;
+                const mix=q*q*(3-2*q);
+                pose=poses[4].map((v,k)=>v+(spinPose[k]-v)*mix);
+              } else {
+                const angle=(step-4)/24*Math.PI*4;
+                const depths=[0,0,-3,-4,3,4,-3,-5,3,5];
+                pose=spinPose.map((v,k)=> {
+                  const point=Math.floor(k/2), x=spinPose[point*2]-16, z=depths[point];
+                  return k%2===0 ? 16+x*Math.cos(angle)+z*Math.sin(angle)
+                    : v+(x*Math.sin(angle)-z*Math.cos(angle))*.22;
+                });
+                // Sweeping arcs at floor level reinforce the direction of rotation.
+                for(let arc=0;arc<2;arc++) for(let k=0;k<9;k++) {
+                  const theta=angle+arc*Math.PI+k*.13;
+                  dot(16+12*Math.cos(theta),59+2*Math.sin(theta));
+                }
+              }
+            }
             const [sx,sy,hx,hy,lex,ley,lwx,lwy,rex,rey,rwx,rwy,lkx,lky,lax,lay,rkx,rky,rax,ray]=pose;
             const length=Math.hypot(sx-hx,sy-hy);
             const ux=(sx-hx)/length, uy=(sy-hy)/length, vx=-uy, vy=ux;
@@ -966,7 +992,7 @@
             for(let k=-2;k<=2;k++) dot(hx+ux*2+vx*k,hy+uy*2+vy*k,0);
             line(3,62,29,62);
             // A brief accent marks the held one-hand freeze.
-            if(n===5 || n===6) { star(3,35,1); star(28,47,1); }
+            if(!spinning && (n===5 || n===6)) { star(3,35,1); star(28,47,1); }
           } else if (name === "rocket") {
             const y = 70-t*94;
             for (let dy=0;dy<23;dy++) {
