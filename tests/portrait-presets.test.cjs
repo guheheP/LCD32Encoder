@@ -40,8 +40,8 @@ test('human animations wrap without a discontinuous pose jump',()=>{
   }
 });
 
-test('all six passage presets can be mirrored without changing frame timing or pixels',()=>{
-  for(const name of ['cat','rabbit','bird','fish','stars','hearts']) {
+test('all four passage presets can be mirrored without changing frame timing or pixels',()=>{
+  for(const name of ['bird','fish','stars','hearts']) {
     const left=presets.build(name,{direction:'left'});
     const right=presets.build(name,{direction:'right'});
     assert.equal(left.length,right.length);
@@ -56,5 +56,18 @@ test('all six passage presets can be mirrored without changing frame timing or p
   }
 });
 test('removed reel presets are unavailable',()=>{
-  for(const name of ['reel','jackpot']) assert.throws(()=>presets.build(name));
+  for(const name of ['reel','jackpot','cat','rabbit']) assert.throws(()=>presets.build(name));
+});
+
+test('warp and tunnel support thicker strokes and exact monochrome inversion',()=>{
+  for(const name of ['warp','tunnel']) {
+    const thin=presets.build(name,{stroke:1});
+    for(const stroke of [2,3]) {
+      const thick=presets.build(name,{stroke});
+      const inverse=presets.build(name,{stroke,inverted:true});
+      assert.ok(thick.reduce((n,f)=>n+f.filter(Boolean).length,0)>thin.reduce((n,f)=>n+f.filter(Boolean).length,0));
+      for(let f=0;f<thick.length;f++) for(let k=0;k<2048;k++) assert.equal(thick[f][k]+inverse[f][k],1);
+      codec.decodeFrames(codec.encodeFrames(inverse,{width:32,height:64}),{width:32,height:64}).forEach((f,i)=>assert.deepEqual(Array.from(f),Array.from(inverse[i])));
+    }
+  }
 });

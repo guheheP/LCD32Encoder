@@ -311,70 +311,89 @@
           <p class="field-note source-note">設定してから画像を選択。<span id="importSize">32×32</span>に縮小して、現在のフレームに読み込みます。</p>
         </div>
         <div id="source-pattern" class="source-content" role="tabpanel" aria-labelledby="source-pattern-tab" hidden>
-          <div>
-            <h3>ドット絵</h3>
+          <details class="sample-animation-block preset-category"><summary>基本のドット絵 <span aria-hidden="true">＋</span></summary>
             <div class="pattern-grid">
               <button type="button" data-pattern="smile"><svg class="icon" aria-hidden="true"><use href="#i-smile"/></svg>スマイル</button>
               <button type="button" data-pattern="checker"><svg class="icon" aria-hidden="true"><use href="#i-checker"/></svg>チェック</button>
-              <button type="button" data-pattern="x">╳ クロス</button><button type="button" data-pattern="vertical">│ 縦線</button><button type="button" data-pattern="horizontal">─ 横線</button>
+              <button type="button" data-pattern="x">╳ クロス</button>
+              <button type="button" data-pattern="vertical">│ 縦線</button>
+              <button type="button" data-pattern="horizontal">─ 横線</button>
             </div>
-            <p class="field-note">現在のフレームに適用します。</p>
-          </div>
-          <div class="sample-animation-block">
-            <h3>縦画面プリセット · 32×64</h3>
+            <p class="field-note">現在のサイズ・現在のフレームに適用します。</p>
+          </details>
+          <details class="sample-animation-block preset-category"><summary>人物・ダンス <span aria-hidden="true">＋</span></summary>
             <div class="pattern-grid">
               <button type="button" data-portrait="dance">ダンス</button>
               <button type="button" data-portrait="breakdance">ブレイクダンス</button>
               <button type="button" data-portrait="rope">なわとび</button>
-              <button type="button" data-portrait="rocket">ロケット上昇</button>
-              <button type="button" data-portrait="jellyfish">泳ぐクラゲ</button>
-              <button type="button" data-portrait="fireworks">打ち上げ花火</button>
               <button type="button" data-portrait="basketball">バスケットボール</button>
+            </div>
+            <p class="field-note">32×64に切り替えて、全フレームを置き換えます。</p>
+          </details>
+          <details class="sample-animation-block preset-category"><summary>宇宙・光の演出 <span aria-hidden="true">＋</span></summary>
+            <div class="field"><label for="warpStroke">ワープ・トンネルの線</label><select id="warpStroke"><option value="1">細い</option><option value="2" selected>太い</option><option value="3">極太</option></select></div>
+            <div class="field"><label for="warpPolarity">ワープ・トンネルの明暗</label><select id="warpPolarity"><option value="normal">通常</option><option value="invert">反転</option></select></div>
+            <p class="field-note">線と明暗を選んでから、ワープまたはトンネルを適用します。</p>
+            <div class="pattern-grid">
+              <button type="button" data-portrait="rocket">ロケット上昇</button>
               <button type="button" data-portrait="astronaut">宇宙遊泳</button>
+              <button type="button" data-portrait="warp">スター・ワープ</button>
+              <button type="button" data-portrait="tunnel">光のトンネル</button>
+              <button type="button" data-portrait="meteor">流星群</button>
+              <button type="button" data-portrait="burst">放射光</button>
+              <button type="button" data-portrait="ripple">波紋</button>
+              <button type="button" data-portrait="spiral">光のらせん</button>
+              <button type="button" data-portrait="vortex">渦巻き</button>
+            </div>
+            <p class="field-note">32×64に切り替えて、全フレームを置き換えます。</p>
+          </details>
+          <details class="sample-animation-block preset-category"><summary>自然・生き物 <span aria-hidden="true">＋</span></summary>
+            <div class="pattern-grid">
+              <button type="button" data-portrait="jellyfish">泳ぐクラゲ</button>
               <button type="button" data-portrait="flower">花が咲く</button>
+              <button type="button" data-portrait="rain">雨としずく</button>
+              <button type="button" data-portrait="snow">舞う雪</button>
+              <button type="button" data-portrait="bubbles">浮かぶ泡</button>
+              <button type="button" data-portrait="flame">ゆらめく炎</button>
+            </div>
+            <p class="field-note">32×64に切り替えて、全フレームを置き換えます。</p>
+          </details>
+          <details class="sample-animation-block preset-category"><summary>お祝い・合図 <span aria-hidden="true">＋</span></summary>
+            <div class="pattern-grid">
+              <button type="button" data-portrait="fireworks">打ち上げ花火</button>
               <button type="button" data-portrait="coins">コインシャワー</button>
               <button type="button" data-portrait="countdown">カウントダウン</button>
             </div>
-            <details class="sample-animation-block"><summary>動物・図形の通過 <span aria-hidden="true">＋</span></summary>
-              <div class="field"><label for="portraitDirection">通過する向き</label><select id="portraitDirection"><option value="left">右 → 左</option><option value="right">左 → 右</option></select></div>
-              <div class="pattern-grid">
-                <button type="button" data-portrait="cat">走るネコ</button>
-                <button type="button" data-portrait="rabbit">跳ねるウサギ</button>
-                <button type="button" data-portrait="bird">羽ばたく鳥</button>
-                <button type="button" data-portrait="fish">泳ぐ魚</button>
-                <button type="button" data-portrait="stars">星の行進</button>
-                <button type="button" data-portrait="hearts">ハートの行進</button>
-              </div>
-            </details>
-            <details class="sample-animation-block"><summary>光・空間の演出 <span aria-hidden="true">＋</span></summary>
-              <div class="pattern-grid">
-                <button type="button" data-portrait="warp">スター・ワープ</button>
-                <button type="button" data-portrait="tunnel">光のトンネル</button>
-                <button type="button" data-portrait="meteor">流星群</button>
-                <button type="button" data-portrait="burst">放射光</button>
-                <button type="button" data-portrait="ripple">波紋</button>
-                <button type="button" data-portrait="spiral">光のらせん</button>
-                <button type="button" data-portrait="vortex">渦巻き</button>
-              </div>
-            </details>
-            <details class="sample-animation-block"><summary>背景・画面切替 <span aria-hidden="true">＋</span></summary>
-              <div class="pattern-grid">
-                <button type="button" data-portrait="curtain">カーテン開閉</button>
-                <button type="button" data-portrait="checkerwipe">市松ワイプ</button>
-                <button type="button" data-portrait="dissolve">粒でフェード</button>
-                <button type="button" data-portrait="rain">雨としずく</button>
-                <button type="button" data-portrait="snow">舞う雪</button>
-                <button type="button" data-portrait="bubbles">浮かぶ泡</button>
-                <button type="button" data-portrait="flame">ゆらめく炎</button>
-              </div>
-            </details>
-            <p class="field-note">縦2枚（32×64）に切り替え、全フレームを置き換えます。単色で上下いっぱいに動きます。再生ボタンで確認できます。</p>
-          </div>
-          <div class="sample-animation-block">
-            <h3>アニメーション</h3>
-            <div class="pattern-grid"><button type="button" data-animation="blink">まばたき</button><button type="button" data-animation="scanner">走査線</button><button type="button" data-animation="ball">跳ねる球</button><button type="button" data-animation="spinner">回転バー</button><button type="button" data-animation="treasure">宝箱 → アイテム</button></div>
-            <p class="field-note">全フレームを置き換えます。</p>
-          </div>
+            <p class="field-note">32×64に切り替えて、全フレームを置き換えます。</p>
+          </details>
+          <details class="sample-animation-block preset-category"><summary>動物・図形の通過 <span aria-hidden="true">＋</span></summary>
+            <div class="field"><label for="portraitDirection">通過する向き</label><select id="portraitDirection"><option value="left">右 → 左</option><option value="right">左 → 右</option></select></div>
+            <div class="pattern-grid">
+              <button type="button" data-portrait="bird">羽ばたく鳥</button>
+              <button type="button" data-portrait="fish">泳ぐ魚</button>
+              <button type="button" data-portrait="stars">星の行進</button>
+              <button type="button" data-portrait="hearts">ハートの行進</button>
+            </div>
+            <p class="field-note">32×64に切り替えて、全フレームを置き換えます。</p>
+          </details>
+          <details class="sample-animation-block preset-category"><summary>背景・画面切替 <span aria-hidden="true">＋</span></summary>
+            <div class="pattern-grid">
+              <button type="button" data-portrait="curtain">カーテン開閉</button>
+              <button type="button" data-portrait="checkerwipe">市松ワイプ</button>
+              <button type="button" data-portrait="dissolve">粒でフェード</button>
+            </div>
+            <p class="field-note">32×64に切り替えて、全フレームを置き換えます。</p>
+          </details>
+          <details class="sample-animation-block preset-category"><summary>基本のアニメーション <span aria-hidden="true">＋</span></summary>
+            <div class="pattern-grid">
+              <button type="button" data-animation="blink">まばたき</button>
+              <button type="button" data-animation="scanner">走査線</button>
+              <button type="button" data-animation="ball">跳ねる球</button>
+              <button type="button" data-animation="spinner">回転バー</button>
+              <button type="button" data-animation="treasure">宝箱 → アイテム</button>
+            </div>
+            <p class="field-note">現在のサイズで、全フレームを置き換えます。</p>
+          </details>
         </div>
         <div id="source-text" class="source-content" role="tabpanel" aria-labelledby="source-text-tab" hidden>
           <div class="text-animation-controls">
@@ -860,8 +879,6 @@
         flower: { label: "花が咲く", count: 48, delay: 110 },
         coins: { label: "コインシャワー", count: 40, delay: 80 },
         countdown: { label: "カウントダウン", count: 48, delay: 80 },
-        cat: { label: "走るネコ", count: 48, delay: 80, effect: "pass" },
-        rabbit: { label: "跳ねるウサギ", count: 48, delay: 80, effect: "pass" },
         bird: { label: "羽ばたく鳥", count: 48, delay: 80, effect: "pass" },
         fish: { label: "泳ぐ魚", count: 48, delay: 80, effect: "pass" },
         stars: { label: "星の行進", count: 48, delay: 80, effect: "pass" },
@@ -881,7 +898,7 @@
         bubbles: { label: "浮かぶ泡", count: 48, delay: 80, effect: "bubbles" },
         flame: { label: "ゆらめく炎", count: 48, delay: 80, effect: "flame" }
       };
-      function build(name, { direction = "left" } = {}) {
+      function build(name, { direction = "left", stroke = 2, inverted = false } = {}) {
         const preset = presets[name];
         if (!preset) throw new Error("不明な縦画面プリセットです。");
         return Array.from({ length: preset.count }, (_, i) => {
@@ -1245,8 +1262,6 @@
             const seed=k=>((k*73+19)%101)/101;
             if(preset.effect==='pass') {
               const sprites={
-                cat:['0100010000000000','0111110000000000','0111010000000001','0111111111100011','0011111111110110','0001111111111100','0001111111111000','0001100000110000'],
-                rabbit:['0010010000000000','0010010000000000','0011010000000000','0111110000000000','0111010000000000','0111110111110000','0011111111111000','0001111111111100','0001111111111100','0000111111111000'],
                 bird:['0000000000000000','0011100000000000','1111011110000000','0011111111110000','0001111111111100','0000111111111111','0000011111100000'],
                 fish:['0000001100000000','0000111110000001','0011111111100011','0111011111110111','1111111111111111','0111111111110111','0011111111100011','0000111110000001','0000001100000000'],
                 stars:['00000100000','00001110000','00001110000','11111111111','01111111110','00111111100','00111111100','00111011100','01110001110','01100000110'],
@@ -1255,16 +1270,9 @@
               const sprite=sprites[name], width=sprite[0].length;
               const origin=32-Math.round(t*(32+width+((name==='stars' || name==='hearts') ? 18 : 4)));
               const px=(x,y,value=1)=>dot(direction==='right' ? 31-Math.round(x) : Math.round(x),y,value);
-              const bob=name==='rabbit' ? -Math.abs(Math.sin(a*3))*5 : Math.sin(a*2)*2;
+              const bob=Math.sin(a*2)*2;
               const top=27+bob;
               sprite.forEach((row,y)=>Array.from(row).forEach((v,x)=>{if(v==='1') px(origin+x,top+y);}));
-              if(name==='cat' || name==='rabbit') {
-                const stride=Math.round(Math.sin(a*4)*2);
-                for(let k=0;k<4;k++) {
-                  px(origin+4+stride,top+sprite.length+k);
-                  px(origin+11-stride,top+sprite.length+k);
-                }
-              }
               if(name==='bird') {
                 const wing=Math.sin(a*4)*7;
                 for(let k=0;k<7;k++) for(let q=0;q<3;q++) px(origin+7+k/2+q,top+3+wing*k/7);
@@ -1278,18 +1286,20 @@
                 for(let k=0;k<6;k++) px(origin+width+3+k*2,top+5+Math.sin(a+k)*3);
               }
             } else if(name==='warp') {
-              for(let k=0;k<30;k++) {
+              const weight=stroke===1 ? 0 : stroke===3 ? 1.5 : 1;
+              for(let k=0;k<24;k++) {
                 const q=(t+seed(k))%1, theta=k*2.399;
-                const radius=2+q*q*44, tail=Math.max(1,radius-q*8);
+                const radius=2+q*q*44, tail=Math.max(1,radius-q*13);
                 line(16+Math.cos(theta)*tail,32+Math.sin(theta)*tail*1.8,
-                     16+Math.cos(theta)*radius,32+Math.sin(theta)*radius*1.8);
+                     16+Math.cos(theta)*radius,32+Math.sin(theta)*radius*1.8,q>.35 ? weight : 0);
               }
             } else if(name==='tunnel') {
-              for(let k=0;k<7;k++) {
-                const q=(t+k/7)%1, r=1+q*q*30;
+              const weight=stroke===1 ? 0 : stroke===3 ? 1.5 : 1;
+              for(let k=0;k<5;k++) {
+                const q=(t+k/5)%1, r=2+q*q*30;
                 const cx=16+Math.sin(a)*3*q, cy=32+Math.cos(a)*4*q;
-                line(cx-r,cy-r*1.6,cx+r,cy-r*1.6); line(cx+r,cy-r*1.6,cx+r,cy+r*1.6);
-                line(cx+r,cy+r*1.6,cx-r,cy+r*1.6); line(cx-r,cy+r*1.6,cx-r,cy-r*1.6);
+                line(cx-r,cy-r*1.6,cx+r,cy-r*1.6,weight); line(cx+r,cy-r*1.6,cx+r,cy+r*1.6,weight);
+                line(cx+r,cy+r*1.6,cx-r,cy+r*1.6,weight); line(cx-r,cy+r*1.6,cx-r,cy-r*1.6,weight);
               }
             } else if(name==='meteor') {
               for(let k=0;k<9;k++) {
@@ -1385,6 +1395,8 @@
             line(14,62,18,62); dot(15,61); dot(17,61);
 
           }
+          if(inverted && (name==='warp' || name==='tunnel'))
+            for(let k=0;k<bitmap.length;k++) bitmap[k]=1-bitmap[k];
           return bitmap;
         });
       }
@@ -2201,7 +2213,7 @@
 
       function applyPortraitPreset(name) {
         const preset = LCDPortraitPresets.presets[name];
-        const nextFrames = LCDPortraitPresets.build(name, { direction: $("portraitDirection").value }).map(frame => Uint8Array.from(frame, value => value ? inkValue() : 0));
+        const nextFrames = LCDPortraitPresets.build(name, { direction: $("portraitDirection").value, stroke: Number($("warpStroke").value), inverted: $("warpPolarity").value === "invert" }).map(frame => Uint8Array.from(frame, value => value ? inkValue() : 0));
         stopPlayback();
         isPainting = false;
         lastPaintIndex = null;
