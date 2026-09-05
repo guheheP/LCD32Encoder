@@ -85,3 +85,36 @@ test('oversized animations fail before replacing the editor with excessive frame
   assert.throws(() => effects.build([long], { width: 32, height: 32, effect: 'scroll-left', scrollStep: 1 }), /最大240/);
   assert.throws(() => effects.build(new Array(64).fill(page), { width: 32, height: 32, effect: 'morph-letters' }), /最大240/);
 });
+
+for (const bits of [1, 5]) test(`${bits}bit image effects preserve source values and Safe round trips across panels`, () => {
+  const size = { width: 64, height: 32 };
+  const bitmap = Uint8Array.from({ length: 2048 }, (_, i) => bits === 1 ? Number(i % 7 === 0) : i % 32);
+  const original = Uint8Array.from(bitmap);
+  const source = { ...size, bitmap };
+  for (const effect of ['scroll-left', 'scroll-right', 'scroll-up', 'scroll-down', 'blink', 'explode', 'assemble', 'morph', ...Object.keys(effects.PRESETS)]) {
+    const frames = effects.build([source], { ...size, effect, steps: 16, hold: 0 });
+    same(bitmap, original);
+    assert.ok(frames.some(frame => !empty(frame)), effect);
+    assert.ok(frames.every(frame => frame.every(value => value >= 0 && value < 2 ** bits)));
+    const decoded = codec.decodeFrames(codec.encodeFrames(frames, size, bits), size, bits);
+    decoded.forEach((frame, i) => same(frame, frames[i]));
+    if (effect in effects.PRESETS || ['assemble', 'morph'].includes(effect)) same(frames.at(-1), bitmap);
+    if (['wipe-left', 'wipe-up', 'checker', 'dissolve', 'zoom'].includes(effect)) assert.ok(empty(frames[0]), effect);
+    if (['rotate', 'shake', 'wave'].includes(effect)) same(frames[0], bitmap);
+    const saved = frames[1][0];
+    frames[0][0] = 255;
+    assert.equal(frames[1][0], saved);
+    same(bitmap, original);
+  }
+});
+
+test('wipe reveals the original image from the specified edge, without recoloring', () => {
+  const size = { width: 32, height: 32 };
+  const bitmap = Uint8Array.from({ length: 1024 }, (_, i) => i % 31 + 1);
+  for (const effect of ['wipe-left', 'wipe-up']) {
+    const middle = effects.build([{ ...size, bitmap }], { ...size, effect, steps: 2, hold: 0 })[1];
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+      assert.equal(middle[y * 32 + x], (effect === 'wipe-left' ? x < 16 : y >= 16) ? bitmap[y * 32 + x] : 0);
+    }
+  }
+});

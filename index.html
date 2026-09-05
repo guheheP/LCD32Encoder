@@ -68,7 +68,7 @@
     .panel-map li { min-width: 0; padding: 5px 2px; text-align: center; border: 1px solid #44523b; border-radius: 3px; background: #232d21; font-size: 11px; color: var(--accent); }
     .panel-map small { display: block; color: var(--muted); font: 10px/1.5 var(--mono); }
     .panel-layout .panel-order-note { margin-top: 6px; margin-bottom: 0; font-size: 10px; }
-    .source-tabs { display: grid; grid-template-columns: repeat(3, 1fr); padding: 4px; margin: 10px; gap: 3px; background: #111618; border: 1px solid var(--line); border-radius: 6px; }
+    .source-tabs { display: grid; grid-template-columns: repeat(2, 1fr); padding: 4px; margin: 10px; gap: 3px; background: #111618; border: 1px solid var(--line); border-radius: 6px; }
     .source-tab { min-height: 32px; padding: 5px 3px; border-color: transparent; background: transparent; color: var(--muted); }
     .source-tab[aria-selected="true"] { color: var(--accent); background: #2b3726; border-color: #425737; }
     .source-content { padding: 4px 12px 16px; }
@@ -301,6 +301,7 @@
           <button id="source-image-tab" class="source-tab" role="tab" type="button" aria-selected="true" aria-controls="source-image" data-source="image">画像</button>
           <button id="source-pattern-tab" class="source-tab" role="tab" type="button" aria-selected="false" aria-controls="source-pattern" tabindex="-1" data-source="pattern">パターン</button>
           <button id="source-text-tab" class="source-tab" role="tab" type="button" aria-selected="false" aria-controls="source-text" tabindex="-1" data-source="text">文字</button>
+          <button id="source-motion-tab" class="source-tab" role="tab" type="button" aria-selected="false" aria-controls="source-motion" tabindex="-1" data-source="motion">動きをつける</button>
         </div>
         <div id="source-image" class="source-content" role="tabpanel" aria-labelledby="source-image-tab">
           <div class="upload-field">
@@ -396,6 +397,19 @@
             </div>
             <p class="field-note">現在のサイズで、全フレームを置き換えます。</p>
           </details>
+        </div>
+        <div id="source-motion" class="source-content" role="tabpanel" aria-labelledby="source-motion-tab" hidden>
+          <p class="field-note">画像・手描き・パターン・文字など、現在のフレーム全体に動きをつけます。</p>
+          <button id="captureMotionButton" type="button">現在のフレームを素材にする</button>
+          <p id="motionSourceLabel" class="field-note">先にキャンバスに素材を用意してください。</p>
+          <canvas id="motionSourcePreview" width="32" height="32" style="max-width:100%;width:128px;image-rendering:pixelated" hidden aria-label="取り込んだアニメーション素材"></canvas>
+          <div class="field"><label for="motionEffect">動き</label><select id="motionEffect"></select></div>
+          <div id="motionStepsField" class="field"><label for="motionSteps">動きのフレーム数</label><input id="motionSteps" type="number" min="2" max="32" value="24"></div>
+          <div id="motionScrollField" class="field" hidden><label for="motionScrollStep">移動ドット / フレーム</label><input id="motionScrollStep" type="number" min="1" max="8" value="2"></div>
+          <div id="motionHoldField" class="field"><label for="motionHold">停止フレーム数</label><input id="motionHold" type="number" min="0" max="20" value="4"></div>
+          <button id="generateMotionButton" class="primary" type="button" disabled>アニメーションを生成</button>
+          <p id="motionFeedback" class="text-feedback" role="status"></p>
+          <p class="field-note">生成すると全フレームを置き換えます。取り込んだ素材は保持するため、効果を変えて何度でも生成できます。サイズ・出力モードを変更した場合は素材を取り込み直してください。再生間隔はフレーム欄で調整できます。</p>
         </div>
         <div id="source-text" class="source-content" role="tabpanel" aria-labelledby="source-text-tab" hidden>
           <div class="text-animation-controls">
@@ -772,7 +786,9 @@
     const LCDTextEffects = (() => {
       "use strict";
       const MAX_FRAMES = 240;
+      const PRESETS = { "wipe-left": "左からワイプ", "wipe-up": "下からワイプ", checker: "市松模様で現れる", dissolve: "粒状に現れる", zoom: "ズームで現れる", rotate: "一回転", shake: "左右に揺れる", wave: "波打つ" };
       const EFFECTS = ["static", "scroll-left", "scroll-right", "scroll-up", "scroll-down", "typewriter", "blink", "explode", "assemble", "morph", "morph-letters"];
+      EFFECTS.push(...Object.keys(PRESETS));
       function noise(index, seed = 1) {
         let value = (Math.imul(index + 1, 374761393) + Math.imul(seed + 1, 668265263)) | 0;
         value = Math.imul(value ^ (value >>> 13), 1274126177);
@@ -852,6 +868,33 @@
           append(effect === "explode" ? blank() : target, hold);
           return frames;
         }
+        if (effect in PRESETS) {
+          const target = centered(pages[0], width, height);
+          const cx = (width - 1) / 2, cy = (height - 1) / 2;
+          for (let step = 0; step <= steps; step += 1) {
+            const p = step / steps;
+            if (step === steps) { append(target); continue; }
+            const frame = blank();
+            const angle = p * Math.PI * 2;
+            for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+              const i = y * width + x;
+              let sx = x, sy = y, visible = true;
+              if (effect === "wipe-left") visible = x < width * p;
+              else if (effect === "wipe-up") visible = y >= height * (1 - p);
+              else if (effect === "checker") visible = ((Math.floor(x / 4) + Math.floor(y / 4)) % 2 + (x % 4 + (y % 4) * 4) / 16) / 2 < p;
+              else if (effect === "dissolve") visible = noise(i) < p;
+              else if (effect === "zoom") { visible = p > 0; sx = cx + (x - cx) / Math.max(p, .001); sy = cy + (y - cy) / Math.max(p, .001); }
+              else if (effect === "rotate") { sx = cx + (x - cx) * Math.cos(angle) + (y - cy) * Math.sin(angle); sy = cy - (x - cx) * Math.sin(angle) + (y - cy) * Math.cos(angle); }
+              else if (effect === "shake") sx -= Math.sin(angle * 2) * Math.min(4, width / 8);
+              else if (effect === "wave") sx -= Math.sin(y * .3 + angle * 2) * Math.sin(Math.PI * p) * 4;
+              sx = Math.round(sx); sy = Math.round(sy);
+              if (visible && sx >= 0 && sx < width && sy >= 0 && sy < height) frame[i] = target[sy * width + sx];
+            }
+            append(frame);
+          }
+          append(target, hold);
+          return frames;
+        }
         let previous = blank();
         append(previous);
         pages.forEach((page, pageIndex) => {
@@ -874,7 +917,7 @@
         });
         return frames;
       }
-      return Object.freeze({ build, centered, MAX_FRAMES });
+      return Object.freeze({ build, centered, MAX_FRAMES, PRESETS: Object.freeze(PRESETS) });
     })();
   </script>
   <script id="lcd-portrait-presets">
@@ -2349,7 +2392,7 @@
       function updateTextControls() {
         const effect = $("textEffect").value;
         const scrolling = effect.startsWith("scroll-");
-        $("textStepsField").hidden = !["morph", "morph-letters", "explode", "assemble"].includes(effect);
+        $("textStepsField").hidden = !["morph", "morph-letters", "explode", "assemble", ...Object.keys(LCDTextEffects.PRESETS)].includes(effect);
         $("textScrollField").hidden = !scrolling;
         $("textTypingField").hidden = effect !== "typewriter";
         $("textHoldField").hidden = effect === "static" || scrolling;
@@ -2363,7 +2406,7 @@
           morph: "ドットが変形し、文章全体が現れます。",
           "morph-letters": "従来の1文字ずつ切り替わる変形です。改行は読み飛ばします。"
         };
-        $("textEffectHint").textContent = (scrolling ? "長い文章も画面の外から流せます。自動サイズは読みやすさを優先。" : hints[effect]) + (effect === "static" ? "" : " 生成すると全フレームを置き換えます。") + " Ctrl+Enterで生成。";
+        $("textEffectHint").textContent = (scrolling ? "長い文章も画面の外から流せます。自動サイズは読みやすさを優先。" : hints[effect] || "文章全体に動きをつけます。回転や揺れでは画面外の部分が切れます。") + (effect === "static" ? "" : " 生成すると全フレームを置き換えます。") + " Ctrl+Enterで生成。";
       }
 
       function rasterizeText(text, effect) {
@@ -2753,6 +2796,54 @@
       document.querySelectorAll("[data-animation]").forEach((button) => {
         button.addEventListener("click", () => applyAnimationSample(button.dataset.animation));
       });
+      for (const [value, label] of Object.entries(LCDTextEffects.PRESETS)) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        $("textEffect").appendChild(option);
+      }
+      for (const option of $("textEffect").querySelectorAll("option")) {
+        if (!["static", "typewriter", "morph-letters"].includes(option.value)) $("motionEffect").appendChild(option.cloneNode(true));
+      }
+      let motionSource = null;
+      $("captureMotionButton").addEventListener("click", () => {
+        stopPlayback();
+        motionSource = { bitmap: Uint8Array.from(pixels), width: WIDTH, height: HEIGHT, mode: pixelMode };
+        const canvas = $("motionSourcePreview");
+        canvas.hidden = false;
+        drawBitmap(canvas.getContext("2d"), motionSource.bitmap, canvasSize());
+        $("motionSourceLabel").textContent = `フレーム${currentFrame + 1}を取り込みました（${WIDTH}×${HEIGHT}）。`;
+        $("generateMotionButton").disabled = false;
+        $("motionFeedback").className = "text-feedback";
+        $("motionFeedback").textContent = "効果を選んで生成してください。回転や揺れでは画面外の部分が切れます。";
+      });
+      function updateMotionControls() {
+        const effect = $("motionEffect").value;
+        const scrolling = effect.startsWith("scroll-");
+        $("motionStepsField").hidden = scrolling || effect === "blink";
+        $("motionScrollField").hidden = !scrolling;
+        $("motionHoldField").hidden = scrolling;
+      }
+      $("motionEffect").addEventListener("change", updateMotionControls);
+      $("generateMotionButton").addEventListener("click", () => {
+        const feedback = $("motionFeedback");
+        try {
+          if (!motionSource || motionSource.width !== WIDTH || motionSource.height !== HEIGHT || motionSource.mode !== pixelMode) throw new Error("現在のサイズ・出力モードで素材を取り込み直してください。");
+          const animation = LCDTextEffects.build([motionSource], {
+            width: WIDTH, height: HEIGHT, effect: $("motionEffect").value,
+            steps: readNumberSetting("motionSteps", 2, 32, 24),
+            hold: readNumberSetting("motionHold", 0, 20, 4),
+            scrollStep: readNumberSetting("motionScrollStep", 1, 8, 2)
+          });
+          setAnimationFrames(animation, "素材からアニメーションを生成しました。");
+          feedback.className = "text-feedback";
+          feedback.textContent = `${animation.length}フレームを生成しました。「再生」で確認できます。`;
+        } catch (error) {
+          feedback.className = "text-feedback error";
+          feedback.textContent = error.message;
+        }
+      });
+      updateMotionControls();
       $("textEffect").addEventListener("change", updateTextControls);
       for (const id of ["textSequence", "textEffect", "textFontSize", "morphSteps", "textHoldFrames", "textScrollStep", "textTypingDelay"]) {
         $(id).addEventListener("input", () => {
