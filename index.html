@@ -843,14 +843,14 @@
             const dancing = name === "dance";
             // Key poses: shoulder centre, hip centre, elbows, hands, knees, ankles.
             const poses = [
-              [15,24,16,38, 7,26,5,18, 23,22,26,13, 11,47,8,57, 21,47,23,57],
-              [13,25,15,39, 6,29,4,23, 21,19,23,10, 10,48,8,57, 22,46,25,51],
-              [14,24,16,38, 6,21,4,12, 23,27,27,21, 11,47,9,57, 21,47,24,57],
-              [17,26,16,40, 8,27,5,20, 25,30,27,24, 12,48,11,57, 20,48,22,57],
-              [18,24,16,38, 9,22,6,13, 26,26,28,18, 11,47,8,57, 21,47,24,57],
-              [20,25,18,39, 12,19,10,10, 27,29,29,23, 10,46,6,51, 23,48,25,57],
-              [18,24,16,38, 9,27,5,21, 26,21,28,12, 11,47,8,57, 21,47,24,57],
-              [15,26,16,40, 7,30,4,24, 24,27,27,20, 12,48,10,57, 20,48,21,57]
+              [14,27,17,41, 6,33,11,36, 23,23,19,17, 9,49,7,57, 24,49,26,57],
+              [12,29,16,43, 5,35,10,38, 21,27,18,19, 8,50,7,57, 23,48,27,54],
+              [15,27,16,41, 7,29,3,25, 24,32,19,35, 10,49,9,57, 23,48,26,56],
+              [18,30,15,43, 10,34,18,35, 26,34,19,31, 10,50,7,57, 22,50,25,57],
+              [19,27,16,41, 10,23,14,17, 27,33,22,36, 9,49,6,57, 24,49,26,57],
+              [21,29,17,43, 12,27,15,19, 28,35,23,38, 10,48,5,54, 24,50,26,57],
+              [18,27,17,41, 9,32,14,35, 26,29,30,25, 10,48,7,56, 23,49,24,57],
+              [15,30,18,43, 7,34,14,31, 23,34,15,35, 10,50,7,57, 23,50,26,57]
             ];
             let pose;
             const jump = Math.max(0, Math.cos(a));
@@ -876,24 +876,41 @@
             };
             // Rear half of the rotation is occluded by the body; front half overlays it.
             if(!dancing && Math.sin(a)<0) rope();
-            line(hx-2,hy,lkx,lky,1.6); line(lkx,lky,lfx,lfy,1.2);
-            line(hx+2,hy,rkx,rky,1.6); line(rkx,rky,rfx,rfy,1.2);
+            line(hx-2,hy,lkx,lky,dancing ? 2 : 1.6); line(lkx,lky,lfx,lfy,dancing ? 1.7 : 1.2);
+            line(hx+2,hy,rkx,rky,dancing ? 2 : 1.6); line(rkx,rky,rfx,rfy,dancing ? 1.7 : 1.2);
             line(lfx-2,lfy+1,lfx+1,lfy+1,1); line(rfx-1,rfy+1,rfx+3,rfy+1,1);
             line(sx-4,sy+1,lex,ley,1.5); line(lex,ley,lhx,lhy,1);
             line(sx+4,sy+1,rex,rey,1.5); line(rex,rey,rhx,rhy,1);
             disk(lhx,lhy,1.3); disk(rhx,rhy,1.3);
-            // Tapered shirt, neck, shaped head and a readable face in negative space.
+            // Loose dance shirt and hat silhouette; the skipping figure retains its original styling.
             for(let dy=0;dy<=hy-sy;dy++) {
-              const u=dy/(hy-sy), cx=sx+(hx-sx)*u, half=4.5-u*1.5;
+              const u=dy/(hy-sy), cx=sx+(hx-sx)*u, half=dancing ? 5-u*.8 : 4.5-u*1.5;
               line(cx-half,sy+dy,cx+half,sy+dy);
             }
             line(sx,sy-3,sx,sy,1);
             disk(sx,sy-8,3.8); disk(sx,sy-5,2.6);
-            line(sx-2,sy-9,sx+2,sy-9); dot(sx-1,sy-7,0); dot(sx+2,sy-7,0);
-            dot(sx+1,sy-5,0);
+            if(dancing) {
+              const tilt=(hx-sx)*.12;
+              // Crown, band and wide brim read as a hat even at native resolution.
+              for(let dy=-15;dy<=-11;dy++) line(sx-3,sy+dy-tilt,sx+3,sy+dy+tilt);
+              for(let dx=-3;dx<=3;dx++) dot(sx+dx,sy-11+tilt*dx/3,0);
+              line(sx-6,sy-10-tilt,sx+6,sy-10+tilt,1);
+            } else {
+              line(sx-2,sy-9,sx+2,sy-9); dot(sx-1,sy-7,0); dot(sx+2,sy-7,0);
+              dot(sx+1,sy-5,0);
+            }
             // Collar and hem separate the clothing from the skin and legs.
             dot(sx-1,sy+1,0); dot(sx,sy+2,0); dot(sx+1,sy+1,0);
             for(let dx=-2;dx<=2;dx++) dot(hx+dx,hy-2,0);
+            if(dancing) {
+              for(const [ex,ey,wx,wy] of [[lex,ley,lhx,lhy],[rex,rey,rhx,rhy]]) {
+                if(wy>sy+3) {
+                  const steps=Math.ceil(Math.max(Math.abs(wx-ex),Math.abs(wy-ey)));
+                  for(let k=0;k<=steps;k++) disk(ex+(wx-ex)*k/steps,ey+(wy-ey)*k/steps,2,0);
+                  line(ex,ey,wx,wy,1); disk(wx,wy,1.3);
+                }
+              }
+            }
             if(!dancing && Math.sin(a)>=0) rope();
             line(10,62,22,62);
             if(dancing) {
