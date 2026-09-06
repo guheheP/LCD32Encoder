@@ -350,7 +350,7 @@
               <button type="button" data-push-order="rlc">右 → 左 → 中</button>
               <button type="button" data-push-order="rcl">右 → 中 → 左</button>
             </div>
-            <p class="field-note">96×32に切り替えて全フレームを置き換えます。丸枠の数字を全体表示した後、1 → 2 → 3の順に縮んで弾け、破片になって消えます。再生間隔はフレーム欄で調整できます。</p>
+            <p class="field-note">96×32に切り替えて全フレームを置き換えます。丸枠の数字を全体表示した後、1 → 2 → 3の順にぷるっと跳ね返り、弾けて消えます。再生間隔はフレーム欄で調整できます。</p>
           </details>
           <details class="sample-animation-block preset-category"><summary>人物・ダンス <span aria-hidden="true">＋</span></summary>
             <div class="pattern-grid">
@@ -1791,7 +1791,7 @@
       const orders = { lcr:[0,1,2], lrc:[0,2,1], clr:[1,0,2], crl:[1,2,0], rlc:[2,0,1], rcl:[2,1,0] };
       const positions = ["左", "中", "右"];
       const presets = Object.freeze(Object.fromEntries(Object.entries(orders).map(([name,order]) =>
-        [name, Object.freeze({label:order.map(p=>positions[p]).join(" → "), order:Object.freeze(order), count:84, delay:80})])));
+        [name, Object.freeze({label:order.map(p=>positions[p]).join(" → "), order:Object.freeze(order), count:84, delay:50})])));
       const digits = [
         ["00100","01100","00100","00100","00100","00100","01110"],
         ["01110","10001","00001","00010","00100","01000","11111"],
@@ -1808,7 +1808,7 @@
           for(let y=0;y<3;y++) for(let x=0;x<3;x++) bitmap[(6+gy*3+y)*32+8+gx*3+x]=1;
         for(let y=0;y<32;y+=2) for(let x=0;x<32;x+=2) {
           const shape=[];
-          for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++) if(bitmap[(y+dy)*32+x+dx]) shape.push([dx,dy]);
+          for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++) if(bitmap[(y+dy)*32+x+dx] && Math.hypot(x+dx-15.5,y+dy-15.5)<13.25) shape.push([dx,dy]);
           if(shape.length) {
             const seed=(x*17+y*31)%97, dx=x+.5-15.5, dy=y+.5-15.5;
             particles.push({x,y,shape,seed,angle:Math.atan2(dy,dx)+(seed%5-2)*.12});
@@ -1826,34 +1826,55 @@
           for(let panel=0;panel<3;panel++) {
             const rank=order.indexOf(panel), {bitmap,particles}=badges[rank];
             if(stage>rank || (stage===rank && phase>=16)) continue;
-            const dot=(x,y) => {
+            const dot=(x,y,value=1) => {
               x=Math.round(x);y=Math.round(y);
-              if(x>=0 && x<32 && y>=0 && y<32) frame[y*96+panel*32+x]=1;
+              if(x>=0 && x<32 && y>=0 && y<32) frame[y*96+panel*32+x]=value;
             };
             if(stage!==rank) {
               for(let y=0;y<32;y++) for(let x=0;x<32;x++) if(bitmap[y*32+x]) dot(x,y);
-            } else if(phase<4) {
-              // A short squeeze gives the pop weight while keeping the number readable.
-              const scale=1-(phase+1)*.045;
+            } else if(phase<6) {
+              // Squash sideways, rebound upward, then settle into the impact.
+              const [sxScale,syScale]=[[.99,.97],[1,.9],[.99,.8],[.94,.72],[.8,1],[.94,.96]][phase];
               for(let y=0;y<32;y++) for(let x=0;x<32;x++) {
-                const sx=Math.round(15.5+(x-15.5)/scale), sy=Math.round(15.5+(y-15.5)/scale);
+                const sx=Math.round(15.5+(x-15.5)/sxScale), sy=Math.round(15.5+(y-15.5)/syScale);
                 if(sx>=0 && sx<32 && sy>=0 && sy<32 && bitmap[sy*32+sx]) dot(x,y);
               }
+            } else if(phase===6) {
+              // A single inverse exposure makes the release read as a crisp pop.
+              for(let y=0;y<32;y++) for(let x=0;x<32;x++) {
+                const r=Math.hypot(x-15.5,y-15.5);
+                if(r<=13 || (r>=14.5 && r<=15.25)) dot(x,y);
+                if(r<13.25 && bitmap[y*32+x]) dot(x,y,0);
+              }
             } else {
-              const u=(phase-4)/11;
+              const u=(phase-7)/8, ease=1-(1-u)**3;
+              // Number fragments launch quickly, decelerate, and fall slightly as they fade.
               for(const particle of particles) {
                 const {x,y,shape,seed,angle}=particle;
-                if(u>=.58+(seed%8)*.055) continue;
-                const travel=1+u*(13+seed%10), spin=(seed%7-3)*u*.45;
-                const px=15.5+(x-15.5)*.9+Math.cos(angle)*travel-Math.sin(angle)*spin;
-                const py=15.5+(y-15.5)*.9+Math.sin(angle)*travel+Math.cos(angle)*spin+3*u*u;
-                if(u<.42) for(const [dx,dy] of shape) dot(px+dx,py+dy);
+                if(u>=.68+(seed%6)*.05) continue;
+                const travel=1+ease*(10+seed%5), spin=(seed%7-3)*u*.4;
+                const px=15.5+(x-15.5)*.92+Math.cos(angle)*travel-Math.sin(angle)*spin;
+                const py=15.5+(y-15.5)*.92+Math.sin(angle)*travel+Math.cos(angle)*spin+4*u*u;
+                if(u<.35) for(const [dx,dy] of shape) dot(px+dx,py+dy);
                 else dot(px+.5,py+.5);
               }
-              // Brief radial streaks connect the impact to the flying fragments.
-              if(phase<=6) for(let ray=0;ray<8;ray++) {
-                const angle=ray*Math.PI/4+.15, inner=9+(phase-4)*3, outer=inner+4;
-                for(let r=inner;r<=outer;r+=.5) dot(15.5+Math.cos(angle)*r,15.5+Math.sin(angle)*r);
+              // The rim breaks into eight coherent arc pieces instead of pixel noise.
+              if(u<.55) for(let shard=0;shard<8;shard++) {
+                const angle=shard*Math.PI/4+.16, distance=1+ease*13;
+                for(let k=-4;k<=4;k++) for(const r of [13.5,14.5]) {
+                  const theta=angle+k*.045;
+                  dot(15.5+Math.cos(theta)*r+Math.cos(angle)*distance,
+                      15.5+Math.sin(theta)*r+Math.sin(angle)*distance+2*u*u);
+                }
+              }
+              // A few short-lived sparkles give the fading pieces a light finish.
+              if(phase>=10 && phase<=14) for(let k=0;k<6;k++) {
+                const age=phase-10-k%3;
+                if(age<0 || age>2) continue;
+                const angle=k*Math.PI/3+.4, r=11+u*5;
+                const x=15.5+Math.cos(angle)*r, y=15.5+Math.sin(angle)*r+2*u*u;
+                dot(x,y);
+                if(age===1) {dot(x-1,y);dot(x+1,y);dot(x,y-1);dot(x,y+1);}
               }
             }
           }

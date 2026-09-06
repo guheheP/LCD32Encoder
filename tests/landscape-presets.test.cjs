@@ -95,7 +95,7 @@ test('push-order catalog covers all six temporal permutations of the three physi
   for (const [name, order] of Object.entries(orders)) {
     assert.deepEqual(Array.from(navigation.presets[name].order), order);
     assert.equal(navigation.presets[name].count, 84);
-    assert.equal(navigation.presets[name].delay, 80);
+    assert.equal(navigation.presets[name].delay, 50);
   }
   assert.equal(new Set(Object.values(navigation.presets).map(preset => Array.from(preset.order).join(''))).size, 6);
 });
@@ -160,7 +160,7 @@ test('all six orders burst one badge at a time without affecting other panels', 
         `${name}: step ${step + 1} visibly animates the badge on physical panel ${active}`);
       assert.ok(new Set(activeFrames.slice(0, 4).map(signature)).size > 1,
         `${name}: active badge prepares for its burst`);
-      assert.ok(activeFrames.slice(4, 12).every(frame => frame.some(Boolean)),
+      assert.ok(activeFrames.slice(7, 13).every(frame => frame.some(Boolean)),
         `${name}: the badge remains visible as moving fragments before disappearing`);
       for (let index = start; index < start + 20; index++) {
         for (let panel = 0; panel < 3; panel++) {
@@ -179,30 +179,39 @@ test('all six orders burst one badge at a time without affecting other panels', 
   }
 });
 
-test('navigation badges contract briefly then scatter outward and fade away', () => {
+test('navigation badges squash, rebound, then scatter outward and fade away', () => {
   const measure = pixels => {
     let count = 0, central = 0, radiusTotal = 0;
+    let minX = 32, maxX = -1, minY = 32, maxY = -1;
     for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
       if (!pixels[y * 32 + x]) continue;
       const radius = Math.hypot(x - 15.5, y - 15.5);
       count++;
       radiusTotal += radius;
       if (radius < 5) central++;
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y); maxY = Math.max(maxY, y);
     }
-    return { count, central, averageRadius: count ? radiusTotal / count : 0 };
+    return {
+      count, central, averageRadius: count ? radiusTotal / count : 0,
+      width: count ? maxX - minX + 1 : 0, height: count ? maxY - minY + 1 : 0,
+    };
   };
   for (const [name, order] of Object.entries(orders)) {
     const frames = navigation.build(name);
     for (let step = 0; step < 3; step++) {
       const start = 12 + step * 20;
       const at = phase => measure(panelPixels(frames[start + phase], order[step]));
-      assert.ok(at(3).averageRadius < at(0).averageRadius - 1,
-        `${name}: rank ${step + 1} contracts before the impact`);
-      assert.ok(at(10).averageRadius > at(5).averageRadius + 1,
+      const initial = measure(panelPixels(frames[0], order[step]));
+      assert.ok(at(3).height < initial.height,
+        `${name}: rank ${step + 1} squashes vertically before the impact`);
+      assert.ok(at(4).height > at(3).height && at(4).width < at(3).width,
+        `${name}: rank ${step + 1} rebounds into a taller, narrower shape`);
+      assert.ok(at(12).averageRadius > at(8).averageRadius + 1,
         `${name}: rank ${step + 1} spreads fragments outward after the impact`);
       assert.ok(at(4).central > 0, `${name}: rank ${step + 1} starts with a visible center`);
-      assert.equal(at(10).central, 0, `${name}: rank ${step + 1} empties its center as fragments scatter`);
-      assert.ok(at(10).count > 0 && at(10).count < at(5).count,
+      assert.equal(at(12).central, 0, `${name}: rank ${step + 1} empties its center as fragments scatter`);
+      assert.ok(at(12).count > 0 && at(12).count < at(8).count,
         `${name}: rank ${step + 1} fades gradually while outer fragments remain visible`);
     }
   }
