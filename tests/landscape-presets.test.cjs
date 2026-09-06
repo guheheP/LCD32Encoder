@@ -106,19 +106,20 @@ for (const name of Object.keys(orders)) {
   });
 }
 
-test('all six push orders have distinct initial rank displays and share the completed state', () => {
+test('all six push orders hold distinct initial rank displays and finish with an empty display', () => {
   const animations = Object.keys(orders).map(name => navigation.build(name));
   assert.equal(new Set(animations.map(frames => signature(frames[0]))).size, 6);
-  assert.equal(new Set(animations.map(frames => signature(frames.at(-1)))).size, 1);
   for (const frames of animations) {
-    assert.notEqual(signature(frames[0]), signature(frames[12]), 'the first instruction changes the initial display');
-    assert.notEqual(signature(frames[12]), signature(frames[32]), 'the second instruction advances the display');
-    assert.notEqual(signature(frames[32]), signature(frames[52]), 'the third instruction advances the display');
-    assert.notEqual(signature(frames[52]), signature(frames[72]), 'completion changes the last active instruction');
+    for (let index = 0; index < 12; index++) {
+      assert.equal(signature(frames[index]), signature(frames[0]), 'the overview holds all three readable ranks');
+    }
+    for (let index = 72; index < frames.length; index++) {
+      assert.ok(frames[index].every(value => value === 0), 'all badges have disappeared during the final pause');
+    }
   }
 });
 
-test('navigation ranks and active panels follow temporal order for all six permutations', () => {
+test('navigation shows centered rank digits inside circular outlines with empty corners', () => {
   const digits = [
     ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
     ['01110', '10001', '00001', '00010', '00100', '01000', '11111'],
@@ -128,25 +129,81 @@ test('navigation ranks and active panels follow temporal order for all six permu
     const frames = navigation.build(name);
     for (let panel = 0; panel < 3; panel++) {
       const rank = order.indexOf(panel);
-      for (let y = 0; y < 7; y++) for (let x = 0; x < 5; x++) {
-        assert.equal(frames[0][(7 + y * 3) * 96 + panel * 32 + 9 + x * 3], Number(digits[rank][y][x]),
-          `${name}: physical panel ${panel} initially shows rank ${rank + 1}`);
+      const badge = panelPixels(frames[0], panel);
+      for (let y = 0; y < 7; y++) for (let x = 0; x < 5; x++) for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 3; dx++) {
+        assert.equal(badge[(6 + y * 3 + dy) * 32 + 8 + x * 3 + dx], Number(digits[rank][y][x]),
+          `${name}: physical panel ${panel} initially shows the complete rank ${rank + 1}`);
       }
-    }
-    for (let step = 0; step < 3; step++) {
-      const start = 12 + step * 20;
-      for (let panel = 0; panel < 3; panel++) {
-        assert.equal(frames[start][5 * 96 + panel * 32 + 5], Number(panel === order[step]),
-          `${name}: step ${step + 1} highlights physical panel ${order[step]}`);
-      }
-      // Confirmation shows the same check as the final state and persists into later steps.
-      const confirmedPanel = order[step];
-      for (const index of [start + 16, ...[32, 52, 72].filter(index => index > start + 16)]) {
-        for (let y = 4; y < 29; y++) for (let x = 4; x < 28; x++) {
-          const offset = y * 96 + confirmedPanel * 32 + x;
-          assert.equal(frames[index][offset], frames[83][offset], `${name}: completed panel ${confirmedPanel} keeps its check`);
+      for (const [left, top] of [[0, 0], [27, 0], [0, 27], [27, 27]]) {
+        for (let y = top; y < top + 5; y++) for (let x = left; x < left + 5; x++) {
+          assert.equal(badge[y * 32 + x], 0, `${name}: circular panel ${panel} has no square corner`);
         }
       }
+      for (const [left, top, width, height] of [[12, 0, 8, 5], [12, 27, 8, 5], [0, 12, 5, 8], [27, 12, 5, 8]]) {
+        let ink = 0;
+        for (let y = top; y < top + height; y++) for (let x = left; x < left + width; x++) ink += badge[y * 32 + x];
+        assert.ok(ink > 0, `${name}: circular panel ${panel} retains its four curved sides`);
+      }
+    }
+  }
+});
+
+test('all six orders burst one badge at a time without affecting other panels', () => {
+  for (const [name, order] of Object.entries(orders)) {
+    const frames = navigation.build(name);
+    const initial = [0, 1, 2].map(panel => signature(panelPixels(frames[0], panel)));
+    for (let step = 0; step < 3; step++) {
+      const start = 12 + step * 20;
+      const active = order[step];
+      const activeFrames = frames.slice(start, start + 16).map(frame => panelPixels(frame, active));
+      assert.ok(new Set(activeFrames.map(signature)).size >= 6,
+        `${name}: step ${step + 1} visibly animates the badge on physical panel ${active}`);
+      assert.ok(new Set(activeFrames.slice(0, 4).map(signature)).size > 1,
+        `${name}: active badge prepares for its burst`);
+      assert.ok(activeFrames.slice(4, 12).every(frame => frame.some(Boolean)),
+        `${name}: the badge remains visible as moving fragments before disappearing`);
+      for (let index = start; index < start + 20; index++) {
+        for (let panel = 0; panel < 3; panel++) {
+          const rank = order.indexOf(panel);
+          const pixels = panelPixels(frames[index], panel);
+          if (rank > step) {
+            assert.equal(signature(pixels), initial[panel],
+              `${name}: frame ${index} leaves future panel ${panel} intact, including during a neighboring burst`);
+          } else if (rank < step || index >= start + 16) {
+            assert.ok(pixels.every(value => value === 0),
+              `${name}: frame ${index} leaves completed panel ${panel} empty`);
+          }
+        }
+      }
+    }
+  }
+});
+
+test('navigation badges contract briefly then scatter outward and fade away', () => {
+  const measure = pixels => {
+    let count = 0, central = 0, radiusTotal = 0;
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+      if (!pixels[y * 32 + x]) continue;
+      const radius = Math.hypot(x - 15.5, y - 15.5);
+      count++;
+      radiusTotal += radius;
+      if (radius < 5) central++;
+    }
+    return { count, central, averageRadius: count ? radiusTotal / count : 0 };
+  };
+  for (const [name, order] of Object.entries(orders)) {
+    const frames = navigation.build(name);
+    for (let step = 0; step < 3; step++) {
+      const start = 12 + step * 20;
+      const at = phase => measure(panelPixels(frames[start + phase], order[step]));
+      assert.ok(at(3).averageRadius < at(0).averageRadius - 1,
+        `${name}: rank ${step + 1} contracts before the impact`);
+      assert.ok(at(10).averageRadius > at(5).averageRadius + 1,
+        `${name}: rank ${step + 1} spreads fragments outward after the impact`);
+      assert.ok(at(4).central > 0, `${name}: rank ${step + 1} starts with a visible center`);
+      assert.equal(at(10).central, 0, `${name}: rank ${step + 1} empties its center as fragments scatter`);
+      assert.ok(at(10).count > 0 && at(10).count < at(5).count,
+        `${name}: rank ${step + 1} fades gradually while outer fragments remain visible`);
     }
   }
 });

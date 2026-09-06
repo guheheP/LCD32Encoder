@@ -350,7 +350,7 @@
               <button type="button" data-push-order="rlc">右 → 左 → 中</button>
               <button type="button" data-push-order="rcl">右 → 中 → 左</button>
             </div>
-            <p class="field-note">96×32に切り替えて全フレームを置き換えます。全体表示 → 1 → 2 → 3の順に強調し、完了した位置はチェックに変わります。再生間隔はフレーム欄で調整できます。</p>
+            <p class="field-note">96×32に切り替えて全フレームを置き換えます。丸枠の数字を全体表示した後、1 → 2 → 3の順に縮んで弾け、破片になって消えます。再生間隔はフレーム欄で調整できます。</p>
           </details>
           <details class="sample-animation-block preset-category"><summary>人物・ダンス <span aria-hidden="true">＋</span></summary>
             <div class="pattern-grid">
@@ -1797,43 +1797,64 @@
         ["01110","10001","00001","00010","00100","01000","11111"],
         ["11110","00001","00001","01110","00001","00001","11110"]
       ];
+      // Each badge has its own particles so a burst never obscures the next panel.
+      const badges = digits.map(glyph => {
+        const bitmap = new Uint8Array(32*32), particles = [];
+        for(let y=0;y<32;y++) for(let x=0;x<32;x++) {
+          const r=Math.hypot(x-15.5,y-15.5);
+          if(r>=13.25 && r<=15.25) bitmap[y*32+x]=1;
+        }
+        for(let gy=0;gy<7;gy++) for(let gx=0;gx<5;gx++) if(glyph[gy][gx]==="1")
+          for(let y=0;y<3;y++) for(let x=0;x<3;x++) bitmap[(6+gy*3+y)*32+8+gx*3+x]=1;
+        for(let y=0;y<32;y+=2) for(let x=0;x<32;x+=2) {
+          const shape=[];
+          for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++) if(bitmap[(y+dy)*32+x+dx]) shape.push([dx,dy]);
+          if(shape.length) {
+            const seed=(x*17+y*31)%97, dx=x+.5-15.5, dy=y+.5-15.5;
+            particles.push({x,y,shape,seed,angle:Math.atan2(dy,dx)+(seed%5-2)*.12});
+          }
+        }
+        return {bitmap,particles};
+      });
       function build(name) {
         if (!Object.hasOwn(presets,name)) throw new Error("不明な押し順ナビです。");
         const {order,count} = presets[name];
         return Array.from({length:count}, (_,i) => {
           const frame = new Uint8Array(96*32);
-          const dot = (x,y,value=1) => { if(x>=0 && x<96 && y>=0 && y<32) frame[y*96+x]=value; };
-          const rect = (x,y,w,h,value=1) => {
-            for(let yy=y;yy<y+h;yy++) for(let xx=x;xx<x+w;xx++) dot(xx,yy,value);
-          };
-          const line = (x0,y0,x1,y1) => {
-            const steps=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1);
-            for(let k=0;k<=steps;k++) rect(Math.round(x0+(x1-x0)*k/steps),Math.round(y0+(y1-y0)*k/steps),2,2);
-          };
           const stage=i<12 ? -1 : i<72 ? Math.floor((i-12)/20) : 3;
           const phase=(i-12)%20;
           for(let panel=0;panel<3;panel++) {
-            const x=panel*32, rank=order.indexOf(panel);
-            const active=rank===stage, done=stage>rank || (active && phase>=16);
-            // Keep every glyph and its border inside its own 32×32 panel.
-            rect(x+3,1,26,1);rect(x+3,30,26,1);rect(x+1,3,1,26);rect(x+30,3,1,26);
-            dot(x+2,2);dot(x+29,2);dot(x+2,29);dot(x+29,29);
-            if(done) {
-              line(x+8,16,x+13,21);line(x+13,21,x+23,11);
-              rect(x+10,26,12,1);
-            } else {
-              if(active) {
-                rect(x+4,5,24,23);rect(x+5,4,22,25);
-                const ay=2+Math.floor(phase/4)%2;
-                rect(x+12,ay,8,1);rect(x+14,ay+1,4,1);
+            const rank=order.indexOf(panel), {bitmap,particles}=badges[rank];
+            if(stage>rank || (stage===rank && phase>=16)) continue;
+            const dot=(x,y) => {
+              x=Math.round(x);y=Math.round(y);
+              if(x>=0 && x<32 && y>=0 && y<32) frame[y*96+panel*32+x]=1;
+            };
+            if(stage!==rank) {
+              for(let y=0;y<32;y++) for(let x=0;x<32;x++) if(bitmap[y*32+x]) dot(x,y);
+            } else if(phase<4) {
+              // A short squeeze gives the pop weight while keeping the number readable.
+              const scale=1-(phase+1)*.045;
+              for(let y=0;y<32;y++) for(let x=0;x<32;x++) {
+                const sx=Math.round(15.5+(x-15.5)/scale), sy=Math.round(15.5+(y-15.5)/scale);
+                if(sx>=0 && sx<32 && sy>=0 && sy<32 && bitmap[sy*32+sx]) dot(x,y);
               }
-              for(let gy=0;gy<7;gy++) for(let gx=0;gx<5;gx++)
-                if(digits[rank][gy][gx]==="1") rect(x+8+gx*3,6+gy*3,3,3,active?0:1);
-            }
-            // The small lower marker travels during the overview and completion hold.
-            if(stage===-1 || stage===3) {
-              const marker=3+((i+(stage===3?4:0))*2)%24;
-              rect(x+marker,29,3,1);
+            } else {
+              const u=(phase-4)/11;
+              for(const particle of particles) {
+                const {x,y,shape,seed,angle}=particle;
+                if(u>=.58+(seed%8)*.055) continue;
+                const travel=1+u*(13+seed%10), spin=(seed%7-3)*u*.45;
+                const px=15.5+(x-15.5)*.9+Math.cos(angle)*travel-Math.sin(angle)*spin;
+                const py=15.5+(y-15.5)*.9+Math.sin(angle)*travel+Math.cos(angle)*spin+3*u*u;
+                if(u<.42) for(const [dx,dy] of shape) dot(px+dx,py+dy);
+                else dot(px+.5,py+.5);
+              }
+              // Brief radial streaks connect the impact to the flying fragments.
+              if(phase<=6) for(let ray=0;ray<8;ray++) {
+                const angle=ray*Math.PI/4+.15, inner=9+(phase-4)*3, outer=inner+4;
+                for(let r=inner;r<=outer;r+=.5) dot(15.5+Math.cos(angle)*r,15.5+Math.sin(angle)*r);
+              }
             }
           }
           return frame;
