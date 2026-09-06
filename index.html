@@ -324,6 +324,34 @@
             </div>
             <p class="field-note">現在のサイズ・現在のフレームに適用します。</p>
           </details>
+          <details class="sample-animation-block preset-category" id="landscapeCategory"><summary>横長のシーン・演出 <span aria-hidden="true">＋</span></summary>
+            <div class="field"><label for="landscapeDirection">横長演出の向き</label><select id="landscapeDirection"><option value="left">標準（通過は右 → 左）</option><option value="right">左右反転（通過は左 → 右）</option></select></div>
+            <div class="pattern-grid">
+              <button type="button" data-landscape="train">列車の通過</button>
+              <button type="button" data-landscape="skyline">流れる街並み</button>
+              <button type="button" data-landscape="dolphins">イルカのジャンプ</button>
+              <button type="button" data-landscape="comet">彗星の軌跡</button>
+              <button type="button" data-landscape="panoramaFireworks">パノラマ花火</button>
+              <button type="button" data-landscape="hyperspace">ハイパースペース</button>
+              <button type="button" data-landscape="laser">ツインレーザー</button>
+              <button type="button" data-landscape="equalizer">リズム・イコライザー</button>
+              <button type="button" data-landscape="chevrons">疾走アロー</button>
+              <button type="button" data-landscape="finishFlag">チェッカーフラッグ</button>
+            </div>
+            <p class="field-note">96×32（横3枚）に切り替えて、全フレームを置き換えます。向きは適用前に選択してください。</p>
+          </details>
+          <details class="sample-animation-block preset-category" id="pushOrderCategory"><summary>押し順ナビ <span aria-hidden="true">＋</span></summary>
+            <p class="field-note">正面から見た左・中・右の3枚に、押す順番を大きな数字で表示します。</p>
+            <div class="pattern-grid">
+              <button type="button" data-push-order="lcr">左 → 中 → 右</button>
+              <button type="button" data-push-order="lrc">左 → 右 → 中</button>
+              <button type="button" data-push-order="clr">中 → 左 → 右</button>
+              <button type="button" data-push-order="crl">中 → 右 → 左</button>
+              <button type="button" data-push-order="rlc">右 → 左 → 中</button>
+              <button type="button" data-push-order="rcl">右 → 中 → 左</button>
+            </div>
+            <p class="field-note">96×32に切り替えて全フレームを置き換えます。全体表示 → 1 → 2 → 3の順に強調し、完了した位置はチェックに変わります。再生間隔はフレーム欄で調整できます。</p>
+          </details>
           <details class="sample-animation-block preset-category"><summary>人物・ダンス <span aria-hidden="true">＋</span></summary>
             <div class="pattern-grid">
               <button type="button" data-portrait="dance">ダンス</button>
@@ -1458,6 +1486,362 @@
       return Object.freeze({ presets, build });
     })();
   </script>
+  <script id="lcd-landscape-presets">
+    const LCDLandscapePresets = (() => {
+      const presets = Object.freeze({
+        train: Object.freeze({ label: "列車の通過", count: 64, delay: 80 }),
+        skyline: Object.freeze({ label: "流れる街並み", count: 64, delay: 90 }),
+        dolphins: Object.freeze({ label: "イルカのジャンプ", count: 64, delay: 80 }),
+        comet: Object.freeze({ label: "彗星の軌跡", count: 64, delay: 70 }),
+        panoramaFireworks: Object.freeze({ label: "パノラマ花火", count: 64, delay: 90 }),
+        hyperspace: Object.freeze({ label: "ハイパースペース", count: 64, delay: 70 }),
+        laser: Object.freeze({ label: "ツインレーザー", count: 64, delay: 80 }),
+        equalizer: Object.freeze({ label: "リズム・イコライザー", count: 64, delay: 80 }),
+        chevrons: Object.freeze({ label: "疾走アロー", count: 48, delay: 80 }),
+        finishFlag: Object.freeze({ label: "チェッカーフラッグ", count: 64, delay: 80 })
+      });
+      function build(name, { direction = "left" } = {}) {
+        if (!Object.prototype.hasOwnProperty.call(presets, name)) throw new Error("不明な横画面プリセットです。");
+        const preset = presets[name], W = 96, H = 32, TAU = Math.PI * 2;
+        const mod = (value, divisor) => ((value % divisor) + divisor) % divisor;
+        return Array.from({ length: preset.count }, (_, i) => {
+          const bitmap = new Uint8Array(W * H), t = i / preset.count, a = t * TAU;
+          const dot = (x, y, value = 1) => {
+            x = Math.round(x); y = Math.round(y);
+            if (x >= 0 && x < W && y >= 0 && y < H) bitmap[y * W + x] = value;
+          };
+          const rect = (x, y, w, h, value = 1) => {
+            const left = Math.round(x), top = Math.round(y);
+            for (let yy = Math.max(0, top); yy < Math.min(H, top + h); yy++)
+              for (let xx = Math.max(0, left); xx < Math.min(W, left + w); xx++) bitmap[yy * W + xx] = value;
+          };
+          const ellipse = (cx, cy, rx, ry, value = 1) => {
+            for (let y = Math.max(0, Math.floor(cy - ry)); y <= Math.min(H - 1, Math.ceil(cy + ry)); y++)
+              for (let x = Math.max(0, Math.floor(cx - rx)); x <= Math.min(W - 1, Math.ceil(cx + rx)); x++)
+                if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1) bitmap[y * W + x] = value;
+          };
+          const disk = (x, y, r, value = 1) => ellipse(x, y, r, r, value);
+          const line = (x0, y0, x1, y1, radius = 0, value = 1) => {
+            const steps = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))));
+            for (let k = 0; k <= steps; k++) {
+              const x = x0 + (x1 - x0) * k / steps, y = y0 + (y1 - y0) * k / steps;
+              if (radius) disk(Math.round(x), Math.round(y), radius, value); else dot(x, y, value);
+            }
+          };
+          const polygon = (points, value = 1) => {
+            const minX = Math.max(0, Math.floor(Math.min(...points.map(p => p[0]))));
+            const maxX = Math.min(W - 1, Math.ceil(Math.max(...points.map(p => p[0]))));
+            const minY = Math.max(0, Math.floor(Math.min(...points.map(p => p[1]))));
+            const maxY = Math.min(H - 1, Math.ceil(Math.max(...points.map(p => p[1]))));
+            for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
+              let inside = false;
+              for (let j = 0, k = points.length - 1; j < points.length; k = j++) {
+                const p = points[j], q = points[k];
+                if ((p[1] > y + .5) !== (q[1] > y + .5) &&
+                    x + .5 < (q[0] - p[0]) * (y + .5 - p[1]) / (q[1] - p[1]) + p[0]) inside = !inside;
+              }
+              if (inside) bitmap[y * W + x] = value;
+            }
+          };
+          const ring = (cx, cy, rx, ry, radius = 0) => {
+            let previous = [cx + rx, cy];
+            for (let k = 1; k <= 96; k++) {
+              const theta = k / 96 * TAU, next = [cx + Math.cos(theta) * rx, cy + Math.sin(theta) * ry];
+              line(...previous, ...next, radius); previous = next;
+            }
+          };
+          const sparkle = (x, y, r = 2) => {
+            line(x - r, y, x + r, y); line(x, y - r, x, y + r);
+            if (r > 3) disk(x, y, 1.5);
+          };
+
+          if (name === "train") {
+            // A locomotive and three connected coaches travel as a 144-pixel loop.
+            // Wheels, connecting rods, roof gaps and windows remain legible at 1×.
+            line(0, 29, 95, 29); line(0, 31, 95, 31);
+            for (let x = 0; x < W; x += 7) dot(x, 30);
+            for (let repeat = -1; repeat <= 1; repeat++) {
+              const x = 8 - t * 144 + repeat * 144;
+              const top = 13 + (i % 8 < 4 ? 0 : 1);
+              // Smoke travels away from the chimney in expanding, hollow puffs.
+              for (let k = 0; k < 4; k++) {
+                const p = mod(t * 2 + k / 4, 1), sx = x + 8 + p * 24, sy = top - 5 - p * 10;
+                ellipse(sx, sy, 1.5 + p * 2.6, 1 + p * 1.6);
+                if (p > .4) ellipse(sx, sy, .5 + p * 1.8, p * .9, 0);
+              }
+              polygon([[x, 25], [x + 4, 20], [x + 6, 25]]);
+              rect(x + 4, top + 4, 18, 8); ellipse(x + 4, top + 8, 2, 4);
+              rect(x + 7, top - 2, 3, 6); rect(x + 6, top - 3, 5, 2);
+              rect(x + 18, top - 2, 10, 14); rect(x + 17, top - 3, 12, 2);
+              rect(x + 21, top, 5, 5, 0); rect(x + 11, top + 5, 5, 1, 0);
+              line(x + 3, 25, x + 29, 25);
+              for (const wx of [8, 17, 25]) {
+                disk(x + wx, 26, wx === 17 ? 3 : 2);
+                disk(x + wx, 26, 1, 0);
+              }
+              const crank = a * 8;
+              line(x + 8 + Math.cos(crank), 26 + Math.sin(crank), x + 17 + Math.cos(crank) * 2, 26 + Math.sin(crank) * 2);
+              for (let coach = 0; coach < 3; coach++) {
+                const cx = x + 31 + coach * 27;
+                line(cx - 3, 24, cx + 1, 24);
+                rect(cx, top + 1, 24, 11); rect(cx + 1, top - 1, 22, 2);
+                for (let window = 0; window < 4; window++) rect(cx + 2 + window * 5, top + 3, 3, 4, 0);
+                line(cx + 1, top + 9, cx + 22, top + 9, 0, 0);
+                disk(cx + 5, 26, 2); disk(cx + 19, 26, 2);
+                dot(cx + 5, 26, 0); dot(cx + 19, 26, 0);
+              }
+            }
+          } else if (name === "skyline") {
+            // Independent repeating layers move at a 1:2 speed ratio.
+            disk(80, 6, 3); disk(78, 5, 3, 0);
+            for (let k = 0; k < 12; k++) if ((i + k * 5) % 32 < 24) dot((k * 29 + 4) % 96, 2 + (k * 7) % 7);
+            const distantHeights = [9, 14, 10, 17, 11, 15, 8, 12, 18, 10, 16, 12];
+            for (let k = -1; k < 25; k++) {
+              const x = k * 8 - t * 96, h = distantHeights[mod(k, 12)];
+              line(x, 25 - h, x + 6, 25 - h); line(x, 25 - h, x, 26); line(x + 6, 25 - h, x + 6, 26);
+              if (k % 3 === 0) line(x + 3, 25 - h, x + 3, 22 - h);
+              for (let y = 28 - h; y < 23; y += 4) dot(x + 3, y);
+            }
+            const nearHeights = [10, 16, 9, 13, 19, 11, 14, 8];
+            for (let k = -1; k < 25; k++) {
+              const x = k * 12 - t * 192, h = nearHeights[mod(k, 8)];
+              rect(x, 30 - h, 10, h); rect(x - 1, 29 - h, 12, 2);
+              if (mod(k, 4) === 0) { rect(x + 3, 27 - h, 4, 3); line(x + 5, 26 - h, x + 5, 24 - h); }
+              for (let y = 32 - h; y < 27; y += 4) for (let wx = 2; wx <= 6; wx += 4)
+                if (mod(k * 3 + y + wx, 5) !== 0) rect(x + wx, y, 2, 2, 0);
+              rect(x + 4, 27, 2, 3, 0);
+            }
+            line(0, 30, 95, 30);
+            for (let x = 0; x < W; x++) if (mod(x + Math.round(t * 192), 12) < 5) dot(x, 31);
+          } else if (name === "dolphins") {
+            // Each animal follows a long ballistic arc; body rotation follows its tangent.
+            const body = [[-11, 0], [-7, -2], [-4, -3], [1, -3], [5, -1], [7, 0], [9, -3], [11, -4], [10, 0], [12, 3], [9, 2], [7, 1], [3, 3], [-3, 3], [-6, 1], [-10, 1]];
+            for (let k = 0; k < 3; k++) {
+              const q = mod(t + k / 3, 1), cx = 109 - q * 122, cy = 28 - 19 * Math.sin(q * Math.PI);
+              const rotation = Math.atan(.49 * Math.cos(q * Math.PI)), c = Math.cos(rotation), s = Math.sin(rotation);
+              const transform = points => points.map(([x, y]) => [cx + x * c - y * s, cy + x * s + y * c]);
+              polygon(transform(body));
+              polygon(transform([[-2, -2], [1, -7], [3, -2]]));
+              polygon(transform([[-1, 2], [2, 6], [4, 2]]));
+              // A tiny cut below the beak distinguishes the dolphin from a fish.
+              const mouth = transform([[-10, 1], [-6, 1]]); line(...mouth[0], ...mouth[1], 0, 0);
+            }
+            // The foreground wave masks the underwater portions of the jumps.
+            for (let x = 0; x < W; x++) {
+              const surface = Math.round(25 + 1.5 * Math.sin(x * TAU / 32 + a * 2));
+              for (let y = surface; y < H; y++) dot(x, y, 0);
+              dot(x, surface);
+              if (mod(x + Math.round(t * 64), 24) < 15) dot(x, 30 + Math.sin(x * TAU / 32 - a * 2));
+            }
+            for (let side = 0; side < 2; side++) {
+              const phase = mod(t * 3 + side * .5, 1), sx = side ? 85 : 11;
+              if (phase < .65) for (let k = 0; k < 3; k++) {
+                const dx = (k - 1) * (2 + phase * 6), sy = 26 - Math.sin(phase / .65 * Math.PI) * (3 + (k % 2) * 2);
+                dot(sx + dx, sy);
+              }
+            }
+          } else if (name === "comet") {
+            for (let k = 0; k < 14; k++) {
+              const x = mod(k * 23 + 5 - t * 32, 96), y = 2 + (k * 13) % 28;
+              if (mod(i + k * 7, 24) < 4) sparkle(x, y, 1); else dot(x, y);
+            }
+            const cx = 112 - t * 184, cy = 16 + Math.sin(a) * 3;
+            // Five tapered, separately readable strands leave dark channels through the tail.
+            for (let strand = -2; strand <= 2; strand++) {
+              let previous;
+              for (let k = 0; k <= 64; k++) {
+                const u = k / 64, point = [cx + 4 + k, cy + strand * (.7 + u * 3.7) + Math.sin(u * 5 - a * 3 + strand) * u * 2];
+                if (previous && (u < .68 || mod(k + i * 2 + strand * 3, 8) < 5)) line(...previous, ...point, u < .35 && strand === 0 ? 1 : 0);
+                previous = point;
+              }
+            }
+            polygon([[cx - 7, cy], [cx - 2, cy - 2], [cx, cy - 6], [cx + 2, cy - 2], [cx + 6, cy], [cx + 2, cy + 2], [cx, cy + 6], [cx - 2, cy + 2]]);
+            disk(cx, cy, 2); dot(cx, cy, 0);
+          } else if (name === "panoramaFireworks") {
+            // Three launches, blooms and falling embers overlap across the three panels.
+            for (let k = 0; k < 3; k++) {
+              const q = mod(t + k / 3, 1), cx = 16 + k * 32, cy = [12, 10, 13][k];
+              if (q < .2) {
+                const progress = q / .2, y = 33 - (33 - cy) * (1 - (1 - progress) ** 1.6);
+                disk(cx, y, 1);
+                for (let j = 2; j < 9; j++) if ((i + j) % 3 !== 0) dot(cx + Math.sin(j + i) * .7, y + j);
+              } else {
+                const progress = (q - .2) / .8, radius = 1 + 14 * (1 - (1 - progress) ** 2.3), fall = progress * progress * 8;
+                if (progress < .09) disk(cx, cy, 2 + progress * 17);
+                for (let spoke = 0; spoke < 18; spoke++) {
+                  const theta = spoke * TAU / 18 + k * .23;
+                  const reach = radius * (spoke % 2 ? .72 : 1), drop = fall * (spoke % 2 ? .85 : 1.1);
+                  const x = cx + Math.cos(theta) * reach, y = cy + Math.sin(theta) * reach * .82 + drop;
+                  const inner = reach * (.38 + progress * .4);
+                  if (progress < .76 || mod(spoke + i, 3) !== 0)
+                    line(cx + Math.cos(theta) * inner, cy + Math.sin(theta) * inner * .82 + drop * .7, x, y, progress < .13 ? 1 : 0);
+                  if (progress > .42 && mod(spoke + i, 4) === 0) dot(x, y + 2);
+                  if (progress < .55 && spoke % 3 === 0) dot(cx + Math.cos(theta + .15) * radius * .36, cy + Math.sin(theta + .15) * radius * .36 + fall * .4);
+                }
+              }
+            }
+            for (let x = 0; x < W; x++) if (x % 6 < 3) dot(x, 31);
+          } else if (name === "hyperspace") {
+            const cx = 48 + Math.sin(a) * 6, cy = 16 + Math.sin(a * 2) * 2;
+            // Chamfered gates and long lateral streaks make the wide vanishing point explicit.
+            for (let gate = 0; gate < 5; gate++) {
+              const q = mod(t * 2 + gate / 5, 1), rx = 2 + q * q * 77, ry = 1 + q * q * 29;
+              const points = [[cx - rx * .72, cy - ry], [cx + rx * .72, cy - ry], [cx + rx, cy - ry * .55],
+                [cx + rx, cy + ry * .55], [cx + rx * .72, cy + ry], [cx - rx * .72, cy + ry],
+                [cx - rx, cy + ry * .55], [cx - rx, cy - ry * .55]];
+              for (let k = 0; k < points.length; k++) line(...points[k], ...points[(k + 1) % points.length], q > .66 ? 1 : 0);
+            }
+            for (let k = 0; k < 22; k++) {
+              const q = mod(t * 3 + k * .381966, 1), theta = k * 2.399963, r = 2 + q * q * 68;
+              const tail = Math.max(2, r - 2 - q * 14), stretch = 2.15;
+              line(cx + Math.cos(theta) * tail * stretch, cy + Math.sin(theta) * tail * .65,
+                cx + Math.cos(theta) * r * stretch, cy + Math.sin(theta) * r * .65, q > .7 ? 1 : 0);
+            }
+            disk(cx, cy, 2, 0); dot(cx, cy);
+            // One short negative exposure accent punctuates the acceleration cycle.
+            if (i >= 46 && i < 50) for (let k = 0; k < bitmap.length; k++) bitmap[k] ^= 1;
+          } else if (name === "laser") {
+            // Two banks charge from opposite edges, collide, then release wide shock waves.
+            for (const x of [3, 92]) {
+              rect(x - 1, 9, 3, 15); ring(x, 16, 5, 8); rect(x - 1, 12, 3, 9, 0);
+              for (let k = 0; k < 3; k++) dot(x + (x < 48 ? -3 : 3), 11 + k * 5);
+            }
+            if (t < .35) {
+              const p = t / .35, reach = 8 + p * 37, radius = p > .7 ? 1 : 0;
+              line(8, 16, reach, 16, radius); line(87, 16, 95 - reach, 16, radius);
+              for (let k = 0; k < 5; k++) {
+                const q = mod(t * 7 + k / 5, 1), x = 7 + q * (reach - 7), dy = Math.sin(q * Math.PI) * (1 - p) * 7;
+                disk(x, 16 + dy, 1); disk(95 - x, 16 - dy, 1);
+              }
+              sparkle(reach, 16, 2 + Math.floor(p * 3)); sparkle(95 - reach, 16, 2 + Math.floor(p * 3));
+            } else if (t < .59) {
+              const p = (t - .35) / .24;
+              line(7, 16, 88, 16, 1.5 + Math.sin(p * Math.PI) * 1.8);
+              for (let x = 8; x <= 87; x++) {
+                const wave = Math.round(Math.sin(x * .45 + a * 12) * 2);
+                dot(x, 10 + wave); dot(x, 22 - wave);
+              }
+              const r = 4 + Math.sin(p * Math.PI) * 8;
+              for (let k = 0; k < 10; k++) {
+                const theta = k * TAU / 10 + p;
+                line(48, 16, 48 + Math.cos(theta) * r * 1.4, 16 + Math.sin(theta) * r, 1);
+              }
+              disk(48, 16, 3, 0); sparkle(48, 16, 1);
+            } else {
+              const p = (t - .59) / .41;
+              for (let k = 0; k < 3; k++) {
+                const q = p - k * .17;
+                if (q > 0) ring(48, 16, 3 + q * 65, 2 + q * 24, q < .2 ? 1 : 0);
+              }
+              if (p < .65) sparkle(48, 16, Math.max(1, Math.round(5 * (1 - p))));
+              for (let k = 0; k < 12; k++) {
+                const theta = k * TAU / 12, r = 9 + p * 40;
+                if ((k + i) % 3) dot(48 + Math.cos(theta) * r * 1.5, 16 + Math.sin(theta) * r * .6);
+              }
+            }
+          } else if (name === "equalizer") {
+            for (let bar = 0; bar < 24; bar++) {
+              const level = phase => 3 + 22 * Math.max(0, Math.min(1,
+                .42 + .25 * Math.sin(phase * 2 - bar * .42) + .19 * Math.sin(phase * 5 + bar * .78) + .12 * Math.cos(phase * 3 - bar * .2)));
+              const h = Math.round(level(a)), peak = Math.round(Math.max(h, level(a - .25), level(a - .5)));
+              const x = bar * 4;
+              for (let y = 28 - h; y < 28; y++) if ((27 - y) % 3 !== 2) rect(x, y, 3, 1);
+              rect(x, Math.max(0, 26 - peak), 3, 1);
+              if (h > 10) rect(x, 30, 3, 1);
+              if (h > 19) dot(x + 1, 31);
+            }
+            line(0, 28, 95, 28);
+          } else if (name === "chevrons") {
+            // Four large arrowheads stream over all three panels; double rails add speed.
+            for (let y = 2; y < 30; y++) for (let x = 0; x < W; x++) {
+              const phase = mod(x - Math.abs(y - 15.5) * .92 + t * 96, 24);
+              if (phase < 7 || (phase >= 10 && phase < 11.5)) dot(x, y);
+            }
+            for (let x = 0; x < W; x++) if (mod(x + Math.round(t * 96), 12) < 7) { dot(x, 0); dot(x, 31); }
+          } else if (name === "finishFlag") {
+            line(3, 3, 3, 31, 1); disk(3, 2, 2);
+            const edge = 92 + Math.round(Math.sin(a * 2) * 2);
+            for (let x = 6; x <= edge; x++) {
+              const bend = Math.sin(a * 2 - (x - 6) * .1), amplitude = (x - 6) / 87;
+              const top = 5 + bend * amplitude * 2.5, bottom = 25 + bend * amplitude * 3;
+              const u = (x - 6) / 7.2 + bend * amplitude * .5;
+              for (let y = Math.ceil(top); y <= Math.floor(bottom); y++) {
+                const v = (y - top) / (bottom - top) * 4;
+                if (mod(Math.floor(u) + Math.floor(v), 2) === 0) dot(x, y);
+              }
+              dot(x, top); dot(x, bottom);
+              if (x === 6 || x === edge) line(x, top, x, bottom);
+            }
+            line(3, 6, 6, 6); line(3, 24, 6, 24);
+          }
+          if (direction === "right") {
+            for (let y = 0; y < H; y++) for (let x = 0; x < W / 2; x++) {
+              const left = y * W + x, right = y * W + W - 1 - x, value = bitmap[left];
+              bitmap[left] = bitmap[right]; bitmap[right] = value;
+            }
+          }
+          return bitmap;
+        });
+      }
+      return Object.freeze({ presets, build });
+    })();
+  </script>
+  <script id="lcd-push-order-presets">
+    const LCDPushOrderPresets = (() => {
+      const orders = { lcr:[0,1,2], lrc:[0,2,1], clr:[1,0,2], crl:[1,2,0], rlc:[2,0,1], rcl:[2,1,0] };
+      const positions = ["左", "中", "右"];
+      const presets = Object.freeze(Object.fromEntries(Object.entries(orders).map(([name,order]) =>
+        [name, Object.freeze({label:order.map(p=>positions[p]).join(" → "), order:Object.freeze(order), count:84, delay:80})])));
+      const digits = [
+        ["00100","01100","00100","00100","00100","00100","01110"],
+        ["01110","10001","00001","00010","00100","01000","11111"],
+        ["11110","00001","00001","01110","00001","00001","11110"]
+      ];
+      function build(name) {
+        if (!Object.hasOwn(presets,name)) throw new Error("不明な押し順ナビです。");
+        const {order,count} = presets[name];
+        return Array.from({length:count}, (_,i) => {
+          const frame = new Uint8Array(96*32);
+          const dot = (x,y,value=1) => { if(x>=0 && x<96 && y>=0 && y<32) frame[y*96+x]=value; };
+          const rect = (x,y,w,h,value=1) => {
+            for(let yy=y;yy<y+h;yy++) for(let xx=x;xx<x+w;xx++) dot(xx,yy,value);
+          };
+          const line = (x0,y0,x1,y1) => {
+            const steps=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1);
+            for(let k=0;k<=steps;k++) rect(Math.round(x0+(x1-x0)*k/steps),Math.round(y0+(y1-y0)*k/steps),2,2);
+          };
+          const stage=i<12 ? -1 : i<72 ? Math.floor((i-12)/20) : 3;
+          const phase=(i-12)%20;
+          for(let panel=0;panel<3;panel++) {
+            const x=panel*32, rank=order.indexOf(panel);
+            const active=rank===stage, done=stage>rank || (active && phase>=16);
+            // Keep every glyph and its border inside its own 32×32 panel.
+            rect(x+3,1,26,1);rect(x+3,30,26,1);rect(x+1,3,1,26);rect(x+30,3,1,26);
+            dot(x+2,2);dot(x+29,2);dot(x+2,29);dot(x+29,29);
+            if(done) {
+              line(x+8,16,x+13,21);line(x+13,21,x+23,11);
+              rect(x+10,26,12,1);
+            } else {
+              if(active) {
+                rect(x+4,5,24,23);rect(x+5,4,22,25);
+                const ay=2+Math.floor(phase/4)%2;
+                rect(x+12,ay,8,1);rect(x+14,ay+1,4,1);
+              }
+              for(let gy=0;gy<7;gy++) for(let gx=0;gx<5;gx++)
+                if(digits[rank][gy][gx]==="1") rect(x+8+gx*3,6+gy*3,3,3,active?0:1);
+            }
+            // The small lower marker travels during the overview and completion hold.
+            if(stage===-1 || stage===3) {
+              const marker=3+((i+(stage===3?4:0))*2)%24;
+              rect(x+marker,29,3,1);
+            }
+          }
+          return frame;
+        });
+      }
+      return Object.freeze({presets,build});
+    })();
+  </script>
   <script id="lcd-gif">
     const LCDGif = (() => {
       "use strict";
@@ -2376,6 +2760,21 @@
         setAnimationFrames(nextFrames, `縦画面プリセット「${preset.label}」を32×64に適用しました（${nextFrames.length}フレーム）。再生ボタンで動きを確認できます。`);
       }
 
+      function applyLandscapePreset(name, navigation = false) {
+        const source = navigation ? LCDPushOrderPresets : LCDLandscapePresets;
+        const preset = source.presets[name];
+        const nextFrames = source.build(name, {direction:$("landscapeDirection").value})
+          .map(frame => Uint8Array.from(frame, value => value ? inkValue() : 0));
+        stopPlayback();
+        isPainting = false;
+        lastPaintIndex = null;
+        suppressNextClick = false;
+        WIDTH = 96; HEIGHT = 32; PIXEL_COUNT = WIDTH * HEIGHT;
+        updateCanvasSizeUI();
+        $("frameDelay").value = String(preset.delay);
+        setAnimationFrames(nextFrames, `${navigation ? "押し順ナビ" : "横長プリセット"}「${preset.label}」を96×32に適用しました（${nextFrames.length}フレーム）。再生ボタンで動きを確認できます。`);
+      }
+
       function applyAnimationSample(name) {
         const labels = { blink: "まばたき", scanner: "走査線", ball: "跳ねる球", spinner: "回転バー", treasure: "宝箱→アイテム" };
         if (name === "treasure") $("frameDelay").value = "160";
@@ -2792,6 +3191,12 @@
       });
       document.querySelectorAll("[data-portrait]").forEach(button => {
         button.addEventListener("click", () => applyPortraitPreset(button.dataset.portrait));
+      });
+      document.querySelectorAll("[data-landscape]").forEach(button => {
+        button.addEventListener("click", () => applyLandscapePreset(button.dataset.landscape));
+      });
+      document.querySelectorAll("[data-push-order]").forEach(button => {
+        button.addEventListener("click", () => applyLandscapePreset(button.dataset.pushOrder, true));
       });
       document.querySelectorAll("[data-animation]").forEach((button) => {
         button.addEventListener("click", () => applyAnimationSample(button.dataset.animation));
